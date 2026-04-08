@@ -23,6 +23,7 @@ const VERDICT_ACK_MS = 180;
 const CARD_EXIT_MS = 280;
 const FEEDBACK_TIMEOUT_MS = 1800;
 const MAX_QUEUE_LENGTH = 500;
+const GUEST_BROWSE_FEEDBACK = "Browsing only. Connect wallet to record verdicts.";
 
 function toVoteDirection(direction: SwipeDirection): VoteDirection {
   return direction === "trust" ? "love" : "hate";
@@ -311,14 +312,19 @@ function VerdictActionButton({
 
 function VerdictGestureHint({
   layout,
+  readOnly = false,
   subdued = false,
   className,
 }: {
   layout: VerdictCardLayout;
+  readOnly?: boolean;
   subdued?: boolean;
   className?: string;
 }) {
   const isDesktop = layout === "desktop";
+  const copy = readOnly
+    ? "Swipe to browse KOLs - connect wallet to record"
+    : "Swipe right to endorse - swipe left to reject";
 
   return (
     <motion.div
@@ -346,7 +352,7 @@ function VerdictGestureHint({
           isDesktop ? "text-[0.58rem]" : "text-[0.54rem] leading-5",
         )}
       >
-        Swipe right to endorse • Swipe left to reject
+        {copy}
       </span>
 
       <motion.span
@@ -369,6 +375,7 @@ function VerdictGestureHint({
 function VerdictCard({
   card,
   layout,
+  readOnly,
   direction,
   pendingDirection,
   voteLocked,
@@ -379,6 +386,7 @@ function VerdictCard({
 }: {
   card: HomeCardView;
   layout: VerdictCardLayout;
+  readOnly: boolean;
   direction: SwipeDirection | null;
   pendingDirection: SwipeDirection | null;
   voteLocked: boolean;
@@ -564,7 +572,7 @@ function VerdictCard({
 
               <div className="grid grid-cols-2 gap-3">
                 <VerdictActionButton
-                  label="Reject"
+                  label={readOnly ? "Skip" : "Reject"}
                   icon="close"
                   tone="tertiary"
                   successBurst={direction === "scam"}
@@ -574,8 +582,8 @@ function VerdictCard({
                   onClick={onReject}
                 />
                 <VerdictActionButton
-                  label="Endorse"
-                  icon="favorite"
+                  label={readOnly ? "Next" : "Endorse"}
+                  icon={readOnly ? "chevron_right" : "favorite"}
                   tone="primary"
                   successBurst={direction === "trust"}
                   layout={layout}
@@ -777,7 +785,7 @@ function VerdictCard({
 
           <div className={cx("grid grid-cols-2", isDesktop ? "gap-3" : "gap-2.5")}>
             <VerdictActionButton
-              label="Reject"
+              label={readOnly ? "Skip" : "Reject"}
               icon="close"
               tone="tertiary"
               successBurst={direction === "scam"}
@@ -787,8 +795,8 @@ function VerdictCard({
               onClick={onReject}
             />
             <VerdictActionButton
-              label="Endorse"
-              icon="favorite"
+              label={readOnly ? "Next" : "Endorse"}
+              icon={readOnly ? "chevron_right" : "favorite"}
               tone="primary"
               successBurst={direction === "trust"}
               layout={layout}
@@ -914,7 +922,7 @@ function DesktopVerdictSurface({
   pendingVote,
   feedback,
   nextCard,
-  session,
+  readOnly,
   isTransitioning,
   reviewedCount,
   totalCount,
@@ -926,7 +934,7 @@ function DesktopVerdictSurface({
   pendingVote: PendingVote | null;
   feedback: { text: string; tone: FeedbackTone } | null;
   nextCard: HomeCardView | null;
-  session: unknown;
+  readOnly: boolean;
   isTransitioning: boolean;
   reviewedCount: number;
   totalCount: number;
@@ -951,6 +959,7 @@ function DesktopVerdictSurface({
             <VerdictCard
               card={activeCard}
               layout="desktop"
+              readOnly={readOnly}
               direction={direction}
               pendingDirection={pendingVote?.slug === activeCard.slug ? pendingVote.direction : null}
               voteLocked={voteLocked}
@@ -963,9 +972,9 @@ function DesktopVerdictSurface({
         ) : null}
       </AnimatePresence>
 
-      <VerdictGestureHint layout="desktop" subdued={voteLocked || isTransitioning} />
+      <VerdictGestureHint layout="desktop" readOnly={readOnly} subdued={voteLocked || isTransitioning} />
 
-      {!session ? null : <QueueImagePreload card={nextCard} />}
+      <QueueImagePreload card={nextCard} />
     </div>
   );
 }
@@ -977,7 +986,7 @@ function MobileVerdictSurface({
   pendingVote,
   feedback,
   nextCard,
-  session,
+  readOnly,
   isTransitioning,
   reviewedCount,
   totalCount,
@@ -989,7 +998,7 @@ function MobileVerdictSurface({
   pendingVote: PendingVote | null;
   feedback: { text: string; tone: FeedbackTone } | null;
   nextCard: HomeCardView | null;
-  session: unknown;
+  readOnly: boolean;
   isTransitioning: boolean;
   reviewedCount: number;
   totalCount: number;
@@ -1002,10 +1011,10 @@ function MobileVerdictSurface({
         {!isTransitioning ? (
           <motion.div
             key={activeCard.slug}
-            drag={session && !voteLocked ? "x" : false}
+            drag={!voteLocked ? "x" : false}
             dragConstraints={{ left: 0, right: 0 }}
             onDragEnd={(_, info) => {
-              if (!session || voteLocked) {
+              if (voteLocked) {
                 return;
               }
 
@@ -1028,6 +1037,7 @@ function MobileVerdictSurface({
             <VerdictCard
               card={activeCard}
               layout="mobile"
+              readOnly={readOnly}
               direction={direction}
               pendingDirection={pendingVote?.slug === activeCard.slug ? pendingVote.direction : null}
               voteLocked={voteLocked}
@@ -1040,20 +1050,19 @@ function MobileVerdictSurface({
         ) : null}
       </AnimatePresence>
 
-      <VerdictGestureHint layout="mobile" subdued={voteLocked || isTransitioning} className="hidden" />
+      <VerdictGestureHint layout="mobile" readOnly={readOnly} subdued={voteLocked || isTransitioning} className="hidden" />
 
-      {!session ? null : <QueueImagePreload card={nextCard} />}
+      <QueueImagePreload card={nextCard} />
     </div>
   );
 }
 
 export function HomeScreen() {
-  const { session, requireWalletForWrite } = useWalletSession();
+  const { session } = useWalletSession();
   const [queue, setQueue] = useState<HomeCardView[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<SwipeDirection | null>(null);
   const [pendingVote, setPendingVote] = useState<PendingVote | null>(null);
-  const [isAuthPrompting, setIsAuthPrompting] = useState(false);
   const [isAcknowledging, setIsAcknowledging] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; tone: FeedbackTone } | null>(null);
@@ -1063,18 +1072,16 @@ export function HomeScreen() {
   const acknowledgementTimeoutRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
-  const authPromptingRef = useRef(false);
   const queueRef = useRef<HomeCardView[]>([]);
   const currentIndexRef = useRef(0);
   const reviewedSlugsRef = useRef<Record<string, boolean>>({});
-  const actionLockedRef = useRef(false);
   const voteLockedRef = useRef(false);
-  const activeCardSlugRef = useRef<string | null>(null);
 
   const activeCard = currentIndex < queue.length ? queue[currentIndex] : null;
   const nextCard = currentIndex + 1 < queue.length ? queue[currentIndex + 1] : null;
   const reviewedCount = Math.min(queue.length, Object.keys(reviewedSlugs).length);
-  const voteLocked = pendingVote !== null || isAuthPrompting || isAcknowledging || isTransitioning;
+  const voteLocked = pendingVote !== null || isAcknowledging || isTransitioning;
+  const readOnly = !session;
   const showQueueSurface = loadState === "ready" && activeCard !== null;
 
   useEffect(() => {
@@ -1090,16 +1097,8 @@ export function HomeScreen() {
   }, [reviewedSlugs]);
 
   useEffect(() => {
-    actionLockedRef.current = pendingVote !== null || isAcknowledging || isTransitioning;
-  }, [isAcknowledging, isTransitioning, pendingVote]);
-
-  useEffect(() => {
     voteLockedRef.current = voteLocked;
   }, [voteLocked]);
-
-  useEffect(() => {
-    activeCardSlugRef.current = activeCard?.slug ?? null;
-  }, [activeCard]);
 
   function clearAcknowledgementTimeout() {
     if (acknowledgementTimeoutRef.current !== null) {
@@ -1206,52 +1205,72 @@ export function HomeScreen() {
     setReloadNonce((current) => current + 1);
   }
 
+  function advanceQueueAfterDecision(
+    card: HomeCardView,
+    next: SwipeDirection,
+    message: string,
+    tone: FeedbackTone,
+    persistFeedback = false,
+  ) {
+    const latestReviewedSlugs = reviewedSlugsRef.current;
+    const latestQueue = queueRef.current;
+    const latestIndex = currentIndexRef.current;
+    const nextReviewedSlugs = {
+      ...latestReviewedSlugs,
+      [card.slug]: true,
+    };
+    const nextIndex = getNextQueueIndex(latestQueue, latestIndex + 1, nextReviewedSlugs);
+
+    setReviewedSlugs(nextReviewedSlugs);
+    setDirection(next);
+    setIsAcknowledging(true);
+    setFeedbackMessage(message, tone);
+
+    acknowledgementTimeoutRef.current = window.setTimeout(() => {
+      setIsAcknowledging(false);
+      setIsTransitioning(true);
+      acknowledgementTimeoutRef.current = null;
+
+      transitionTimeoutRef.current = window.setTimeout(() => {
+        setCurrentIndex(nextIndex);
+        setPendingVote(null);
+        setIsTransitioning(false);
+        setDirection(null);
+
+        if (persistFeedback) {
+          setTimedFeedback(message, tone);
+        } else {
+          setFeedback(null);
+        }
+
+        if (nextIndex >= queueRef.current.length) {
+          setLoadState("exhausted");
+        }
+
+        transitionTimeoutRef.current = null;
+      }, CARD_EXIT_MS);
+    }, VERDICT_ACK_MS);
+  }
+
   async function submitVote(card: HomeCardView, next: SwipeDirection) {
     const currentReviewedSlugs = reviewedSlugsRef.current;
 
     if (!card || voteLockedRef.current || currentReviewedSlugs[card.slug]) {
       if (card && currentReviewedSlugs[card.slug]) {
-        setTimedFeedback("Verdict recorded", "secondary");
+        setTimedFeedback(session ? "Verdict recorded" : GUEST_BROWSE_FEEDBACK, "secondary");
       }
       return;
-    }
-
-    if (!session) {
-      if (authPromptingRef.current) {
-        return;
-      }
-
-      authPromptingRef.current = true;
-      setIsAuthPrompting(true);
-
-      try {
-        const granted = await requireWalletForWrite({
-          title: "Connect wallet to continue",
-          message: "Connect your wallet to submit a live verdict.",
-          cardClassName: "max-w-[18rem] rounded-[1.6rem] border border-white/8 bg-surface-container-high/95 px-5 py-5",
-        });
-
-        if (!granted) {
-          return;
-        }
-
-        if (
-          actionLockedRef.current ||
-          reviewedSlugsRef.current[card.slug] ||
-          activeCardSlugRef.current !== card.slug
-        ) {
-          return;
-        }
-      } finally {
-        authPromptingRef.current = false;
-        setIsAuthPrompting(false);
-      }
     }
 
     clearAcknowledgementTimeout();
     clearTransitionTimeout();
     clearFeedbackTimeout();
     setPendingVote({ slug: card.slug, direction: next });
+
+    if (!session) {
+      advanceQueueAfterDecision(card, next, GUEST_BROWSE_FEEDBACK, "secondary", true);
+      return;
+    }
 
     try {
       const payload: VoteRequest = {
@@ -1268,40 +1287,9 @@ export function HomeScreen() {
       });
       await parseApiResponse<VoteResponse>(response);
 
-      const latestReviewedSlugs = reviewedSlugsRef.current;
-      const latestQueue = queueRef.current;
-      const latestIndex = currentIndexRef.current;
-      const nextReviewedSlugs = {
-        ...latestReviewedSlugs,
-        [card.slug]: true,
-      };
-      const nextIndex = getNextQueueIndex(latestQueue, latestIndex + 1, nextReviewedSlugs);
       const successMessage = next === "trust" ? "Endorsed" : next === "scam" ? "Rejected" : "Verdict recorded";
 
-      setReviewedSlugs(nextReviewedSlugs);
-      setDirection(next);
-      setIsAcknowledging(true);
-      setFeedbackMessage(successMessage, feedbackTone(next));
-
-      acknowledgementTimeoutRef.current = window.setTimeout(() => {
-        setIsAcknowledging(false);
-        setIsTransitioning(true);
-        acknowledgementTimeoutRef.current = null;
-
-        transitionTimeoutRef.current = window.setTimeout(() => {
-          setCurrentIndex(nextIndex);
-          setPendingVote(null);
-          setIsTransitioning(false);
-          setDirection(null);
-          setFeedback(null);
-
-          if (nextIndex >= queueRef.current.length) {
-            setLoadState("exhausted");
-          }
-
-          transitionTimeoutRef.current = null;
-        }, CARD_EXIT_MS);
-      }, VERDICT_ACK_MS);
+      advanceQueueAfterDecision(card, next, successMessage, feedbackTone(next));
     } catch (error) {
       clearAcknowledgementTimeout();
       clearTransitionTimeout();
@@ -1333,7 +1321,7 @@ export function HomeScreen() {
               pendingVote={pendingVote}
               feedback={feedback}
               nextCard={nextCard}
-              session={session}
+              readOnly={readOnly}
               isTransitioning={isTransitioning}
               reviewedCount={reviewedCount}
               totalCount={queue.length}
@@ -1374,7 +1362,7 @@ export function HomeScreen() {
                 pendingVote={pendingVote}
                 feedback={feedback}
                 nextCard={nextCard}
-                session={session}
+                readOnly={readOnly}
                 isTransitioning={isTransitioning}
                 reviewedCount={reviewedCount}
                 totalCount={queue.length}

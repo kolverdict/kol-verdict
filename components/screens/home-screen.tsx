@@ -14,6 +14,8 @@ import { clamp, cx } from "@/lib/utils";
 
 type SwipeDirection = "trust" | "scam";
 type VoteDirection = "love" | "hate";
+type BrowseDirection = "previous" | "next";
+type CardTransitionDirection = SwipeDirection | BrowseDirection;
 type FeedbackTone = "primary" | "secondary" | "tertiary";
 type HomeLoadState = "loading" | "ready" | "empty" | "error" | "exhausted";
 type PendingVote = { slug: string; direction: SwipeDirection };
@@ -23,7 +25,6 @@ const VERDICT_ACK_MS = 180;
 const CARD_EXIT_MS = 280;
 const FEEDBACK_TIMEOUT_MS = 1800;
 const MAX_QUEUE_LENGTH = 500;
-const GUEST_BROWSE_FEEDBACK = "Browsing only. Connect wallet to record verdicts.";
 
 function toVoteDirection(direction: SwipeDirection): VoteDirection {
   return direction === "trust" ? "love" : "hate";
@@ -35,6 +36,10 @@ function voteTag(direction: SwipeDirection) {
 
 function feedbackTone(direction: SwipeDirection): FeedbackTone {
   return direction === "trust" ? "primary" : "tertiary";
+}
+
+function exitsLeft(direction: CardTransitionDirection | null) {
+  return direction === "scam" || direction === "next";
 }
 
 function homeStatusCopy(state: Exclude<HomeLoadState, "ready">) {
@@ -312,19 +317,16 @@ function VerdictActionButton({
 
 function VerdictGestureHint({
   layout,
-  readOnly = false,
+  copy,
   subdued = false,
   className,
 }: {
   layout: VerdictCardLayout;
-  readOnly?: boolean;
+  copy?: string;
   subdued?: boolean;
   className?: string;
 }) {
   const isDesktop = layout === "desktop";
-  const copy = readOnly
-    ? "Swipe to browse KOLs - connect wallet to record"
-    : "Swipe right to endorse - swipe left to reject";
 
   return (
     <motion.div
@@ -352,7 +354,7 @@ function VerdictGestureHint({
           isDesktop ? "text-[0.58rem]" : "text-[0.54rem] leading-5",
         )}
       >
-        {copy}
+        {copy ?? "Swipe left for next - swipe right for previous"}
       </span>
 
       <motion.span
@@ -372,10 +374,63 @@ function VerdictGestureHint({
   );
 }
 
+function DesktopBrowseButton({
+  direction,
+  disabled,
+  onClick,
+}: {
+  direction: BrowseDirection;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const isPrevious = direction === "previous";
+
+  return (
+    <button
+      type="button"
+      aria-label={isPrevious ? "Previous KOL" : "Next KOL"}
+      disabled={disabled}
+      onClick={onClick}
+      className="kv-focus-ring inline-flex h-9 items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-3 font-label text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-on-surface-variant transition-colors duration-200 hover:bg-white/8 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {isPrevious ? <Icon name="chevron_left" className="text-[0.95rem]" /> : null}
+      <span>{isPrevious ? "Previous" : "Next"}</span>
+      {!isPrevious ? <Icon name="chevron_right" className="text-[0.95rem]" /> : null}
+    </button>
+  );
+}
+
+function DesktopBrowseControls({
+  canGoPrevious,
+  canGoNext,
+  disabled,
+  onBrowse,
+}: {
+  canGoPrevious: boolean;
+  canGoNext: boolean;
+  disabled: boolean;
+  onBrowse: (direction: BrowseDirection) => void;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <DesktopBrowseButton
+        direction="previous"
+        disabled={disabled || !canGoPrevious}
+        onClick={() => onBrowse("previous")}
+      />
+      <VerdictGestureHint layout="desktop" copy="Browse queue" subdued={disabled} />
+      <DesktopBrowseButton
+        direction="next"
+        disabled={disabled || !canGoNext}
+        onClick={() => onBrowse("next")}
+      />
+    </div>
+  );
+}
+
 function VerdictCard({
   card,
   layout,
-  readOnly,
   direction,
   pendingDirection,
   voteLocked,
@@ -386,8 +441,7 @@ function VerdictCard({
 }: {
   card: HomeCardView;
   layout: VerdictCardLayout;
-  readOnly: boolean;
-  direction: SwipeDirection | null;
+  direction: CardTransitionDirection | null;
   pendingDirection: SwipeDirection | null;
   voteLocked: boolean;
   enableInteractiveMotion: boolean;
@@ -572,7 +626,7 @@ function VerdictCard({
 
               <div className="grid grid-cols-2 gap-3">
                 <VerdictActionButton
-                  label={readOnly ? "Skip" : "Reject"}
+                  label="Reject"
                   icon="close"
                   tone="tertiary"
                   successBurst={direction === "scam"}
@@ -582,8 +636,8 @@ function VerdictCard({
                   onClick={onReject}
                 />
                 <VerdictActionButton
-                  label={readOnly ? "Next" : "Endorse"}
-                  icon={readOnly ? "chevron_right" : "favorite"}
+                  label="Endorse"
+                  icon="favorite"
                   tone="primary"
                   successBurst={direction === "trust"}
                   layout={layout}
@@ -785,7 +839,7 @@ function VerdictCard({
 
           <div className={cx("grid grid-cols-2", isDesktop ? "gap-3" : "gap-2.5")}>
             <VerdictActionButton
-              label={readOnly ? "Skip" : "Reject"}
+              label="Reject"
               icon="close"
               tone="tertiary"
               successBurst={direction === "scam"}
@@ -795,8 +849,8 @@ function VerdictCard({
               onClick={onReject}
             />
             <VerdictActionButton
-              label={readOnly ? "Next" : "Endorse"}
-              icon={readOnly ? "chevron_right" : "favorite"}
+              label="Endorse"
+              icon="favorite"
               tone="primary"
               successBurst={direction === "trust"}
               layout={layout}
@@ -919,25 +973,31 @@ function DesktopVerdictSurface({
   activeCard,
   direction,
   voteLocked,
+  browseLocked,
   pendingVote,
   feedback,
   nextCard,
-  readOnly,
   isTransitioning,
   reviewedCount,
   totalCount,
+  canBrowsePrevious,
+  canBrowseNext,
+  onBrowse,
   onVote,
 }: {
   activeCard: HomeCardView;
-  direction: SwipeDirection | null;
+  direction: CardTransitionDirection | null;
   voteLocked: boolean;
+  browseLocked: boolean;
   pendingVote: PendingVote | null;
   feedback: { text: string; tone: FeedbackTone } | null;
   nextCard: HomeCardView | null;
-  readOnly: boolean;
   isTransitioning: boolean;
   reviewedCount: number;
   totalCount: number;
+  canBrowsePrevious: boolean;
+  canBrowseNext: boolean;
+  onBrowse: (direction: BrowseDirection) => void;
   onVote: (card: HomeCardView, next: SwipeDirection) => Promise<void>;
 }) {
   return (
@@ -950,7 +1010,7 @@ function DesktopVerdictSurface({
             initial={{ opacity: 0, y: 18, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
             exit={
-              direction === "scam"
+              exitsLeft(direction)
                 ? { opacity: 0, x: [0, -10, 8, -18, -84], y: -6, scale: 0.98 }
                 : { opacity: 0, x: 84, y: -8, scale: 0.985 }
             }
@@ -959,7 +1019,6 @@ function DesktopVerdictSurface({
             <VerdictCard
               card={activeCard}
               layout="desktop"
-              readOnly={readOnly}
               direction={direction}
               pendingDirection={pendingVote?.slug === activeCard.slug ? pendingVote.direction : null}
               voteLocked={voteLocked}
@@ -972,7 +1031,12 @@ function DesktopVerdictSurface({
         ) : null}
       </AnimatePresence>
 
-      <VerdictGestureHint layout="desktop" readOnly={readOnly} subdued={voteLocked || isTransitioning} />
+      <DesktopBrowseControls
+        canGoPrevious={canBrowsePrevious}
+        canGoNext={canBrowseNext}
+        disabled={browseLocked || isTransitioning}
+        onBrowse={onBrowse}
+      />
 
       <QueueImagePreload card={nextCard} />
     </div>
@@ -983,25 +1047,27 @@ function MobileVerdictSurface({
   activeCard,
   direction,
   voteLocked,
+  browseLocked,
   pendingVote,
   feedback,
   nextCard,
-  readOnly,
   isTransitioning,
   reviewedCount,
   totalCount,
+  onBrowse,
   onVote,
 }: {
   activeCard: HomeCardView;
-  direction: SwipeDirection | null;
+  direction: CardTransitionDirection | null;
   voteLocked: boolean;
+  browseLocked: boolean;
   pendingVote: PendingVote | null;
   feedback: { text: string; tone: FeedbackTone } | null;
   nextCard: HomeCardView | null;
-  readOnly: boolean;
   isTransitioning: boolean;
   reviewedCount: number;
   totalCount: number;
+  onBrowse: (direction: BrowseDirection) => void;
   onVote: (card: HomeCardView, next: SwipeDirection) => Promise<void>;
 }) {
   return (
@@ -1011,24 +1077,24 @@ function MobileVerdictSurface({
         {!isTransitioning ? (
           <motion.div
             key={activeCard.slug}
-            drag={!voteLocked ? "x" : false}
+            drag={!browseLocked ? "x" : false}
             dragConstraints={{ left: 0, right: 0 }}
             onDragEnd={(_, info) => {
-              if (voteLocked) {
+              if (browseLocked) {
                 return;
               }
 
               const offset = clamp(info.offset.x, -280, 280);
               if (offset > 115) {
-                void onVote(activeCard, "trust");
+                onBrowse("previous");
               } else if (offset < -115) {
-                void onVote(activeCard, "scam");
+                onBrowse("next");
               }
             }}
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
             exit={
-              direction === "scam"
+              exitsLeft(direction)
                 ? { opacity: 0, x: [0, -8, 6, -14, -74], y: -4, scale: 0.98 }
                 : { opacity: 0, x: 74, y: -6, scale: 0.985 }
             }
@@ -1037,7 +1103,6 @@ function MobileVerdictSurface({
             <VerdictCard
               card={activeCard}
               layout="mobile"
-              readOnly={readOnly}
               direction={direction}
               pendingDirection={pendingVote?.slug === activeCard.slug ? pendingVote.direction : null}
               voteLocked={voteLocked}
@@ -1050,7 +1115,7 @@ function MobileVerdictSurface({
         ) : null}
       </AnimatePresence>
 
-      <VerdictGestureHint layout="mobile" readOnly={readOnly} subdued={voteLocked || isTransitioning} className="hidden" />
+      <VerdictGestureHint layout="mobile" subdued={browseLocked || isTransitioning} className="hidden" />
 
       <QueueImagePreload card={nextCard} />
     </div>
@@ -1058,11 +1123,12 @@ function MobileVerdictSurface({
 }
 
 export function HomeScreen() {
-  const { session } = useWalletSession();
+  const { session, requireWalletForWrite } = useWalletSession();
   const [queue, setQueue] = useState<HomeCardView[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState<SwipeDirection | null>(null);
+  const [direction, setDirection] = useState<CardTransitionDirection | null>(null);
   const [pendingVote, setPendingVote] = useState<PendingVote | null>(null);
+  const [isAuthPrompting, setIsAuthPrompting] = useState(false);
   const [isAcknowledging, setIsAcknowledging] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; tone: FeedbackTone } | null>(null);
@@ -1072,16 +1138,21 @@ export function HomeScreen() {
   const acknowledgementTimeoutRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
+  const authPromptingRef = useRef(false);
   const queueRef = useRef<HomeCardView[]>([]);
   const currentIndexRef = useRef(0);
   const reviewedSlugsRef = useRef<Record<string, boolean>>({});
+  const actionLockedRef = useRef(false);
   const voteLockedRef = useRef(false);
+  const activeCardSlugRef = useRef<string | null>(null);
 
   const activeCard = currentIndex < queue.length ? queue[currentIndex] : null;
   const nextCard = currentIndex + 1 < queue.length ? queue[currentIndex + 1] : null;
   const reviewedCount = Math.min(queue.length, Object.keys(reviewedSlugs).length);
-  const voteLocked = pendingVote !== null || isAcknowledging || isTransitioning;
-  const readOnly = !session;
+  const voteLocked = pendingVote !== null || isAuthPrompting || isAcknowledging || isTransitioning;
+  const browseLocked = voteLocked;
+  const canBrowsePrevious = currentIndex > 0;
+  const canBrowseNext = currentIndex + 1 < queue.length;
   const showQueueSurface = loadState === "ready" && activeCard !== null;
 
   useEffect(() => {
@@ -1097,8 +1168,16 @@ export function HomeScreen() {
   }, [reviewedSlugs]);
 
   useEffect(() => {
+    actionLockedRef.current = pendingVote !== null || isAcknowledging || isTransitioning;
+  }, [isAcknowledging, isTransitioning, pendingVote]);
+
+  useEffect(() => {
     voteLockedRef.current = voteLocked;
   }, [voteLocked]);
+
+  useEffect(() => {
+    activeCardSlugRef.current = activeCard?.slug ?? null;
+  }, [activeCard]);
 
   function clearAcknowledgementTimeout() {
     if (acknowledgementTimeoutRef.current !== null) {
@@ -1132,6 +1211,7 @@ export function HomeScreen() {
       setLoadState("loading");
       setDirection(null);
       setPendingVote(null);
+      setIsAuthPrompting(false);
       setIsAcknowledging(false);
       setIsTransitioning(false);
       setFeedback(null);
@@ -1210,7 +1290,6 @@ export function HomeScreen() {
     next: SwipeDirection,
     message: string,
     tone: FeedbackTone,
-    persistFeedback = false,
   ) {
     const latestReviewedSlugs = reviewedSlugsRef.current;
     const latestQueue = queueRef.current;
@@ -1236,12 +1315,7 @@ export function HomeScreen() {
         setPendingVote(null);
         setIsTransitioning(false);
         setDirection(null);
-
-        if (persistFeedback) {
-          setTimedFeedback(message, tone);
-        } else {
-          setFeedback(null);
-        }
+        setFeedback(null);
 
         if (nextIndex >= queueRef.current.length) {
           setLoadState("exhausted");
@@ -1257,20 +1331,47 @@ export function HomeScreen() {
 
     if (!card || voteLockedRef.current || currentReviewedSlugs[card.slug]) {
       if (card && currentReviewedSlugs[card.slug]) {
-        setTimedFeedback(session ? "Verdict recorded" : GUEST_BROWSE_FEEDBACK, "secondary");
+        setTimedFeedback("Verdict recorded", "secondary");
       }
       return;
+    }
+
+    if (!session) {
+      if (authPromptingRef.current) {
+        return;
+      }
+
+      authPromptingRef.current = true;
+      setIsAuthPrompting(true);
+
+      try {
+        const granted = await requireWalletForWrite({
+          title: "Connect wallet to continue",
+          message: "Connect your wallet to submit a live verdict.",
+          cardClassName: "max-w-[18rem] rounded-[1.6rem] border border-white/8 bg-surface-container-high/95 px-5 py-5",
+        });
+
+        if (!granted) {
+          return;
+        }
+
+        if (
+          actionLockedRef.current ||
+          reviewedSlugsRef.current[card.slug] ||
+          activeCardSlugRef.current !== card.slug
+        ) {
+          return;
+        }
+      } finally {
+        authPromptingRef.current = false;
+        setIsAuthPrompting(false);
+      }
     }
 
     clearAcknowledgementTimeout();
     clearTransitionTimeout();
     clearFeedbackTimeout();
     setPendingVote({ slug: card.slug, direction: next });
-
-    if (!session) {
-      advanceQueueAfterDecision(card, next, GUEST_BROWSE_FEEDBACK, "secondary", true);
-      return;
-    }
 
     try {
       const payload: VoteRequest = {
@@ -1287,7 +1388,7 @@ export function HomeScreen() {
       });
       await parseApiResponse<VoteResponse>(response);
 
-      const successMessage = next === "trust" ? "Endorsed" : next === "scam" ? "Rejected" : "Verdict recorded";
+      const successMessage = next === "trust" ? "Endorsed" : "Rejected";
 
       advanceQueueAfterDecision(card, next, successMessage, feedbackTone(next));
     } catch (error) {
@@ -1307,6 +1408,39 @@ export function HomeScreen() {
     }
   }
 
+  function browseQueue(next: BrowseDirection) {
+    if (
+      browseLocked ||
+      transitionTimeoutRef.current !== null ||
+      acknowledgementTimeoutRef.current !== null ||
+      queueRef.current.length === 0
+    ) {
+      return;
+    }
+
+    const latestIndex = currentIndexRef.current;
+    const nextIndex = next === "next" ? latestIndex + 1 : latestIndex - 1;
+
+    if (nextIndex < 0 || nextIndex >= queueRef.current.length || nextIndex === latestIndex) {
+      return;
+    }
+
+    clearAcknowledgementTimeout();
+    clearTransitionTimeout();
+    clearFeedbackTimeout();
+    setDirection(next);
+    setFeedback(null);
+    setIsTransitioning(true);
+
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setCurrentIndex(nextIndex);
+      setIsTransitioning(false);
+      setDirection(null);
+      setFeedback(null);
+      transitionTimeoutRef.current = null;
+    }, CARD_EXIT_MS);
+  }
+
   return (
     <>
       <MobileShell navKey="home" avatar={brandAvatar} rightIconTone="secondary">
@@ -1318,13 +1452,14 @@ export function HomeScreen() {
               activeCard={activeCard}
               direction={direction}
               voteLocked={voteLocked}
+              browseLocked={browseLocked}
               pendingVote={pendingVote}
               feedback={feedback}
               nextCard={nextCard}
-              readOnly={readOnly}
               isTransitioning={isTransitioning}
               reviewedCount={reviewedCount}
               totalCount={queue.length}
+              onBrowse={browseQueue}
               onVote={submitVote}
             />
           ) : loadState === "loading" ? (
@@ -1359,13 +1494,16 @@ export function HomeScreen() {
                 activeCard={activeCard}
                 direction={direction}
                 voteLocked={voteLocked}
+                browseLocked={browseLocked}
                 pendingVote={pendingVote}
                 feedback={feedback}
                 nextCard={nextCard}
-                readOnly={readOnly}
                 isTransitioning={isTransitioning}
                 reviewedCount={reviewedCount}
                 totalCount={queue.length}
+                canBrowsePrevious={canBrowsePrevious}
+                canBrowseNext={canBrowseNext}
+                onBrowse={browseQueue}
                 onVote={submitVote}
               />
             ) : loadState === "loading" ? (

@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import { useId, useState } from "react";
 import { DesktopShell, MobileShell } from "@/components/app-shell";
-import { WalletGate } from "@/components/wallet-gate";
 import { useWalletSession } from "@/components/wallet-session-provider";
 import { Icon } from "@/components/ui";
 import { parseApiResponse, toUserFacingApiError } from "@/lib/api-client";
@@ -143,7 +142,7 @@ function RegistryPreview({
 }
 
 function AddKolContent({ compact = false }: { compact?: boolean }) {
-  const { session } = useWalletSession();
+  const { session, requireWalletForWrite } = useWalletSession();
   const usernameId = useId();
   const walletId = useId();
   const [username, setUsername] = useState("");
@@ -166,11 +165,15 @@ function AddKolContent({ compact = false }: { compact?: boolean }) {
     }
 
     if (!session) {
-      setSubmission({
-        kind: "error",
-        message: "Reconnect wallet to continue.",
+      const granted = await requireWalletForWrite({
+        title: "Connect wallet to continue",
+        message: "Connect your wallet to submit this KOL to the live registry.",
+        cardClassName: "max-w-[22rem] rounded-[1.6rem] border border-white/8 bg-surface-container-high/95 px-5 py-5",
       });
-      return;
+
+      if (!granted) {
+        return;
+      }
     }
 
     setSubmission({ kind: "loading" });
@@ -268,49 +271,42 @@ function AddKolContent({ compact = false }: { compact?: boolean }) {
           <RegistryPreview username={username} wallet={wallet} compact={compact} />
         </div>
 
-        <WalletGate
-          className="pt-8"
-          title="Connect wallet to continue"
-          message="Connect your wallet to submit this KOL to the live registry."
-          cardClassName="max-w-[22rem] rounded-[1.6rem] border border-white/8 bg-surface-container-high/95 px-5 py-5"
-        >
-          <div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={cx(
-                "w-full rounded-full bg-[linear-gradient(135deg,#00cffc_0%,#00677f_100%)] px-6 py-5 font-display text-lg font-bold tracking-tight text-on-background shadow-[0px_8px_24px_rgba(0,207,252,0.3)] transition-all duration-200",
-                isSubmitting
-                  ? "cursor-wait opacity-85"
-                  : "hover:-translate-y-0.5 active:scale-[0.985]",
-              )}
-            >
-              {submission.kind === "loading"
-                ? "SUBMITTING..."
-                : submission.kind === "success"
-                  ? "REGISTERED"
-                  : "SUBMIT TO REGISTRY"}
-            </button>
+        <div className="pt-8">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={cx(
+              "w-full rounded-full bg-[linear-gradient(135deg,#00cffc_0%,#00677f_100%)] px-6 py-5 font-display text-lg font-bold tracking-tight text-on-background shadow-[0px_8px_24px_rgba(0,207,252,0.3)] transition-all duration-200",
+              isSubmitting
+                ? "cursor-wait opacity-85"
+                : "hover:-translate-y-0.5 active:scale-[0.985]",
+            )}
+          >
+            {submission.kind === "loading"
+              ? "SUBMITTING..."
+              : submission.kind === "success"
+                ? "REGISTERED"
+                : "SUBMIT TO REGISTRY"}
+          </button>
 
-            <div aria-live="polite" className="min-h-6 pt-4 text-center">
-              {submission.kind === "success" ? (
-                <p className="font-display text-[0.7rem] font-bold uppercase tracking-[0.18em] text-primary">
-                  {submission.message}
-                </p>
-              ) : null}
+          <div aria-live="polite" className="min-h-6 pt-4 text-center">
+            {submission.kind === "success" ? (
+              <p className="font-display text-[0.7rem] font-bold uppercase tracking-[0.18em] text-primary">
+                {submission.message}
+              </p>
+            ) : null}
 
-              {submission.kind === "error" ? (
-                <p className="font-display text-[0.7rem] font-bold uppercase tracking-[0.18em] text-tertiary">
-                  {submission.message}
-                </p>
-              ) : null}
-            </div>
-
-            <p className="mt-2 text-center font-display text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
-              Transaction Gas Fees Apply
-            </p>
+            {submission.kind === "error" ? (
+              <p className="font-display text-[0.7rem] font-bold uppercase tracking-[0.18em] text-tertiary">
+                {submission.message}
+              </p>
+            ) : null}
           </div>
-        </WalletGate>
+
+          <p className="mt-2 text-center font-display text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+            Transaction Gas Fees Apply
+          </p>
+        </div>
       </form>
     </motion.section>
   );

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { DesktopShell, MobileShell } from "@/components/app-shell";
-import { WalletGate } from "@/components/wallet-gate";
 import { Icon, ImageCard, Pill } from "@/components/ui";
 import { useWalletSession } from "@/components/wallet-session-provider";
 import { parseApiResponse, toUserFacingApiError } from "@/lib/api-client";
@@ -391,37 +390,26 @@ function VerdictCard({
         </div>
 
         <div className="mt-4">
-          <WalletGate
-            title="Connect wallet to continue"
-            message="Connect your wallet to submit a live verdict."
-            className="w-full"
-            contentClassName="w-full"
-            cardClassName={cx(
-              "rounded-[1.6rem] border-white/8 bg-surface-container-high/95",
-              isDesktop ? "max-w-[16rem] px-5 py-[1.125rem]" : "max-w-[14rem] px-4 py-3.5",
-            )}
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <VerdictActionButton
-                label="Reject"
-                icon="close"
-                tone="tertiary"
-                layout={layout}
-                disabled={voteLocked}
-                active={pendingDirection === "scam"}
-                onClick={onReject}
-              />
-              <VerdictActionButton
-                label="Endorse"
-                icon="favorite"
-                tone="primary"
-                layout={layout}
-                disabled={voteLocked}
-                active={pendingDirection === "trust"}
-                onClick={onEndorse}
-              />
-            </div>
-          </WalletGate>
+          <div className="grid grid-cols-2 gap-3">
+            <VerdictActionButton
+              label="Reject"
+              icon="close"
+              tone="tertiary"
+              layout={layout}
+              disabled={voteLocked}
+              active={pendingDirection === "scam"}
+              onClick={onReject}
+            />
+            <VerdictActionButton
+              label="Endorse"
+              icon="favorite"
+              tone="primary"
+              layout={layout}
+              disabled={voteLocked}
+              active={pendingDirection === "trust"}
+              onClick={onEndorse}
+            />
+          </div>
 
           <div
             aria-live="polite"
@@ -673,11 +661,12 @@ function MobileVerdictSurface({
 }
 
 export function HomeScreen() {
-  const { session } = useWalletSession();
+  const { session, requireWalletForWrite } = useWalletSession();
   const [queue, setQueue] = useState<HomeCardView[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<SwipeDirection | null>(null);
   const [pendingVote, setPendingVote] = useState<PendingVote | null>(null);
+  const [isAuthPrompting, setIsAuthPrompting] = useState(false);
   const [isAcknowledging, setIsAcknowledging] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; tone: FeedbackTone } | null>(null);
@@ -687,12 +676,43 @@ export function HomeScreen() {
   const acknowledgementTimeoutRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
   const feedbackTimeoutRef = useRef<number | null>(null);
+  const authPromptingRef = useRef(false);
+  const queueRef = useRef<HomeCardView[]>([]);
+  const currentIndexRef = useRef(0);
+  const reviewedSlugsRef = useRef<Record<string, boolean>>({});
+  const actionLockedRef = useRef(false);
+  const voteLockedRef = useRef(false);
+  const activeCardSlugRef = useRef<string | null>(null);
 
   const activeCard = currentIndex < queue.length ? queue[currentIndex] : null;
   const nextCard = currentIndex + 1 < queue.length ? queue[currentIndex + 1] : null;
   const reviewedCount = Math.min(queue.length, Object.keys(reviewedSlugs).length);
-  const voteLocked = pendingVote !== null || isAcknowledging || isTransitioning;
+  const voteLocked = pendingVote !== null || isAuthPrompting || isAcknowledging || isTransitioning;
   const showQueueSurface = loadState === "ready" && activeCard !== null;
+
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
+  useEffect(() => {
+    reviewedSlugsRef.current = reviewedSlugs;
+  }, [reviewedSlugs]);
+
+  useEffect(() => {
+    actionLockedRef.current = pendingVote !== null || isAcknowledging || isTransitioning;
+  }, [isAcknowledging, isTransitioning, pendingVote]);
+
+  useEffect(() => {
+    voteLockedRef.current = voteLocked;
+  }, [voteLocked]);
+
+  useEffect(() => {
+    activeCardSlugRef.current = activeCard?.slug ?? null;
+  }, [activeCard]);
 
   function clearAcknowledgementTimeout() {
     if (acknowledgementTimeoutRef.current !== null) {
@@ -800,16 +820,45 @@ export function HomeScreen() {
   }
 
   async function submitVote(card: HomeCardView, next: SwipeDirection) {
-    if (!card || voteLocked || reviewedSlugs[card.slug]) {
-      if (card && reviewedSlugs[card.slug]) {
+    const currentReviewedSlugs = reviewedSlugsRef.current;
+
+    if (!card || voteLockedRef.current || currentReviewedSlugs[card.slug]) {
+      if (card && currentReviewedSlugs[card.slug]) {
         setTimedFeedback("Verdict recorded", "secondary");
       }
       return;
     }
 
     if (!session) {
-      setTimedFeedback("Connect wallet to give a verdict.", "secondary");
-      return;
+      if (authPromptingRef.current) {
+        return;
+      }
+
+      authPromptingRef.current = true;
+      setIsAuthPrompting(true);
+
+      try {
+        const granted = await requireWalletForWrite({
+          title: "Connect wallet to continue",
+          message: "Connect your wallet to submit a live verdict.",
+          cardClassName: "max-w-[18rem] rounded-[1.6rem] border border-white/8 bg-surface-container-high/95 px-5 py-5",
+        });
+
+        if (!granted) {
+          return;
+        }
+
+        if (
+          actionLockedRef.current ||
+          reviewedSlugsRef.current[card.slug] ||
+          activeCardSlugRef.current !== card.slug
+        ) {
+          return;
+        }
+      } finally {
+        authPromptingRef.current = false;
+        setIsAuthPrompting(false);
+      }
     }
 
     clearAcknowledgementTimeout();
@@ -832,11 +881,14 @@ export function HomeScreen() {
       });
       await parseApiResponse<VoteResponse>(response);
 
+      const latestReviewedSlugs = reviewedSlugsRef.current;
+      const latestQueue = queueRef.current;
+      const latestIndex = currentIndexRef.current;
       const nextReviewedSlugs = {
-        ...reviewedSlugs,
+        ...latestReviewedSlugs,
         [card.slug]: true,
       };
-      const nextIndex = getNextQueueIndex(queue, currentIndex + 1, nextReviewedSlugs);
+      const nextIndex = getNextQueueIndex(latestQueue, latestIndex + 1, nextReviewedSlugs);
       const successMessage = next === "trust" ? "Endorsed" : next === "scam" ? "Rejected" : "Verdict recorded";
 
       setReviewedSlugs(nextReviewedSlugs);
@@ -856,7 +908,7 @@ export function HomeScreen() {
           setDirection(null);
           setFeedback(null);
 
-          if (nextIndex >= queue.length) {
+          if (nextIndex >= queueRef.current.length) {
             setLoadState("exhausted");
           }
 

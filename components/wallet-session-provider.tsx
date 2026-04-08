@@ -7,10 +7,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { WalletConnectDialog, type WalletPromptOptions } from "@/components/wallet-gate";
 import { parseApiResponse, toUserFacingApiError } from "@/lib/api-client";
 import type { MeResponse, WalletChallengeRequest, WalletChallengeResponse, WalletVerifyRequest, WalletVerifyResponse } from "@/lib/types/api";
 import type { AppProfile, AppSession } from "@/lib/types/domain";
@@ -52,6 +54,7 @@ type WalletSessionContextValue = {
   status: "loading" | "idle" | "connecting" | "disconnecting";
   error: string | null;
   connect: () => Promise<void>;
+  requireWalletForWrite: (options?: WalletPromptOptions) => Promise<boolean>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -91,6 +94,9 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<AppProfile | null>(null);
   const [status, setStatus] = useState<WalletSessionContextValue["status"]>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [walletPrompt, setWalletPrompt] = useState<WalletPromptOptions | null>(null);
+  const promptResolveRef = useRef<((granted: boolean) => void) | null>(null);
+  const promptPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const refresh = useCallback(async () => {
     setStatus((current) => (current === "connecting" || current === "disconnecting" ? current : "loading"));
@@ -177,6 +183,39 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [router]);
 
+  const closeWalletPrompt = useCallback((granted: boolean) => {
+    setWalletPrompt(null);
+
+    if (promptResolveRef.current) {
+      promptResolveRef.current(granted);
+      promptResolveRef.current = null;
+    }
+
+    promptPromiseRef.current = null;
+  }, []);
+
+  const requireWalletForWrite = useCallback(
+    async (options?: WalletPromptOptions) => {
+      if (session) {
+        return true;
+      }
+
+      if (promptPromiseRef.current) {
+        return promptPromiseRef.current;
+      }
+
+      const pendingPrompt = new Promise<boolean>((resolve) => {
+        promptResolveRef.current = resolve;
+      });
+
+      promptPromiseRef.current = pendingPrompt;
+      setWalletPrompt(options ?? {});
+
+      return pendingPrompt;
+    },
+    [session],
+  );
+
   const signOut = useCallback(async () => {
     setStatus("disconnecting");
     setError(null);
@@ -200,6 +239,23 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [router]);
 
+  useEffect(() => {
+    if (session && walletPrompt) {
+      closeWalletPrompt(true);
+    }
+  }, [closeWalletPrompt, session, walletPrompt]);
+
+  useEffect(() => {
+    return () => {
+      if (promptResolveRef.current) {
+        promptResolveRef.current(false);
+        promptResolveRef.current = null;
+      }
+
+      promptPromiseRef.current = null;
+    };
+  }, []);
+
   const value = useMemo(
     () => ({
       session,
@@ -207,13 +263,34 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
       status,
       error,
       connect,
+      requireWalletForWrite,
       signOut,
       refresh,
     }),
-    [connect, error, profile, refresh, session, signOut, status],
+    [connect, error, profile, refresh, requireWalletForWrite, session, signOut, status],
   );
 
-  return <WalletSessionContext.Provider value={value}>{children}</WalletSessionContext.Provider>;
+  return (
+    <WalletSessionContext.Provider value={value}>
+      {children}
+      <WalletConnectDialog
+        open={walletPrompt !== null}
+        busy={status === "connecting" || status === "disconnecting"}
+        error={error}
+        onConnect={connect}
+        onClose={() => closeWalletPrompt(false)}
+        onSuccess={() => closeWalletPrompt(true)}
+        title={walletPrompt?.title}
+        message={walletPrompt?.message}
+        buttonLabel={walletPrompt?.buttonLabel}
+        className={walletPrompt?.className}
+        cardClassName={walletPrompt?.cardClassName}
+        buttonClassName={walletPrompt?.buttonClassName}
+        eyebrow={walletPrompt?.eyebrow}
+        footer={walletPrompt?.footer}
+      />
+    </WalletSessionContext.Provider>
+  );
 }
 
 export function useWalletSession() {

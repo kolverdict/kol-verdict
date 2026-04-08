@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Icon } from "@/components/ui";
-import { WalletGate } from "@/components/wallet-gate";
 import { useWalletSession } from "@/components/wallet-session-provider";
 import { parseApiResponse, toUserFacingApiError } from "@/lib/api-client";
 import type { AttachEvidenceResponse, CreateCommentRequest, CreateCommentResponse } from "@/lib/types/api";
@@ -195,7 +194,7 @@ function prepareEvidence(mode: EvidenceMode, selectedFile: File | null, evidence
 }
 
 function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: VerifyClaimDialogProps) {
-  const { session } = useWalletSession();
+  const { session, requireWalletForWrite } = useWalletSession();
   const [selectedTag, setSelectedTag] = useState<(typeof classificationTags)[number]>("Good Calls");
   const [selectedEvidenceMode, setSelectedEvidenceMode] = useState<EvidenceMode>("image");
   const [description, setDescription] = useState("");
@@ -296,8 +295,15 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
     }
 
     if (!session) {
-      setSubmission({ kind: "error", message: "Reconnect wallet to continue." });
-      return;
+      const granted = await requireWalletForWrite({
+        title: "Connect wallet to continue",
+        message: "Connect your wallet to submit a verdict and attach evidence.",
+        cardClassName: "max-w-[18rem] rounded-[1.5rem] px-5 py-5",
+      });
+
+      if (!granted) {
+        return;
+      }
     }
 
     setSubmission({ kind: "loading" });
@@ -394,172 +400,165 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
           </button>
         </div>
 
-        <WalletGate
-          className="px-7 pb-7 sm:px-8 sm:pb-8"
-          title="Connect wallet to continue"
-          message="Connect your wallet to submit a verdict and attach evidence."
-          cardClassName="max-w-[18rem] rounded-[1.5rem] px-5 py-5"
-        >
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
-                Verdict Details
-              </label>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                disabled={submission.kind === "loading" || Boolean(draftComment)}
-                placeholder="Detail your verdict, timing, and what the attached proof confirms."
-                className="h-28 w-full resize-none rounded-xl border border-transparent bg-surface-container-lowest p-4 text-base leading-7 text-on-surface placeholder:text-outline/50 transition-colors duration-300 focus:border-primary-dim focus:outline-none disabled:cursor-default disabled:opacity-75"
-              />
+        <div className="space-y-6 px-7 pb-7 sm:px-8 sm:pb-8">
+          <div className="space-y-2">
+            <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+              Verdict Details
+            </label>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              disabled={submission.kind === "loading" || Boolean(draftComment)}
+              placeholder="Detail your verdict, timing, and what the attached proof confirms."
+              className="h-28 w-full resize-none rounded-xl border border-transparent bg-surface-container-lowest p-4 text-base leading-7 text-on-surface placeholder:text-outline/50 transition-colors duration-300 focus:border-primary-dim focus:outline-none disabled:cursor-default disabled:opacity-75"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+              Classification Tags
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
+              {classificationTags.map((tag) => {
+                const selected = selectedTag === tag;
+
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setSelectedTag(tag)}
+                    disabled={submission.kind === "loading" || Boolean(draftComment)}
+                    className={cx(
+                      "rounded-lg border px-3 py-2.5 font-display text-[0.68rem] font-bold uppercase tracking-[0.04em] transition-all duration-300",
+                      submission.kind === "loading" || Boolean(draftComment) ? "cursor-default opacity-70" : "",
+                      tagTone(tag, selected),
+                    )}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
-            <div className="space-y-3">
-              <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
-                Classification Tags
-              </label>
-              <div className="grid grid-cols-3 gap-2.5">
-                {classificationTags.map((tag) => {
-                  const selected = selectedTag === tag;
+          <div className="space-y-3">
+            <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+              Evidence Type
+            </label>
+            <div className="grid grid-cols-2 gap-2.5">
+              {evidenceModes.map((mode) => {
+                const selected = selectedEvidenceMode === mode.value;
 
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => setSelectedTag(tag)}
-                      disabled={submission.kind === "loading" || Boolean(draftComment)}
-                      className={cx(
-                        "rounded-lg border px-3 py-2.5 font-display text-[0.68rem] font-bold uppercase tracking-[0.04em] transition-all duration-300",
-                        submission.kind === "loading" || Boolean(draftComment) ? "cursor-default opacity-70" : "",
-                        tagTone(tag, selected),
-                      )}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
+                return (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    onClick={() => handleEvidenceModeChange(mode.value)}
+                    disabled={submission.kind === "loading"}
+                    className={cx(
+                      "flex items-center gap-2 rounded-xl border px-3 py-3 font-display text-[0.7rem] font-bold uppercase tracking-[0.08em] transition-all duration-300",
+                      selected
+                        ? "border-secondary/30 bg-secondary/10 text-secondary"
+                        : "border-outline-variant/12 bg-surface-container-low text-on-surface-variant hover:border-white/10 hover:bg-surface-bright",
+                      submission.kind === "loading" ? "cursor-default opacity-70" : "",
+                    )}
+                  >
+                    <Icon name={mode.icon} className="text-[1rem]" />
+                    {mode.label}
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
-            <div className="space-y-3">
-              <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
-                Evidence Type
-              </label>
-              <div className="grid grid-cols-2 gap-2.5">
-                {evidenceModes.map((mode) => {
-                  const selected = selectedEvidenceMode === mode.value;
+          <div className="space-y-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={handleAttachmentSelection}
+            />
 
-                  return (
-                    <button
-                      key={mode.value}
-                      type="button"
-                      onClick={() => handleEvidenceModeChange(mode.value)}
-                      disabled={submission.kind === "loading"}
-                      className={cx(
-                        "flex items-center gap-2 rounded-xl border px-3 py-3 font-display text-[0.7rem] font-bold uppercase tracking-[0.08em] transition-all duration-300",
-                        selected
-                          ? "border-secondary/30 bg-secondary/10 text-secondary"
-                          : "border-outline-variant/12 bg-surface-container-low text-on-surface-variant hover:border-white/10 hover:bg-surface-bright",
-                        submission.kind === "loading" ? "cursor-default opacity-70" : "",
-                      )}
-                    >
-                      <Icon name={mode.icon} className="text-[1rem]" />
-                      {mode.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={handleAttachmentSelection}
-              />
-
-              {selectedEvidenceMode === "image" ? (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={submission.kind === "loading"}
-                  className="group flex w-full items-center justify-center gap-3 rounded-xl border border-outline-variant/15 bg-surface-container-high px-4 py-4 transition-all duration-300 hover:bg-surface-bright"
-                  title={selectedFile?.name}
-                >
-                  <Icon
-                    name="attachment"
-                    className="text-[1.25rem] text-secondary transition-transform duration-300 group-hover:scale-110"
-                  />
-                  <span className="max-w-[14rem] truncate font-display text-[0.95rem] font-semibold tracking-[-0.02em] text-on-surface">
-                    {selectedFile?.name ?? evidenceModeMeta.placeholder}
-                  </span>
-                </button>
-              ) : (
-                <input
-                  type={selectedEvidenceMode === "tx" ? "text" : "url"}
-                  value={evidenceValue}
-                  onChange={(event) => setEvidenceValue(event.target.value)}
-                  disabled={submission.kind === "loading"}
-                  placeholder={evidenceModeMeta.placeholder}
-                  className="w-full rounded-xl border border-transparent bg-surface-container-lowest px-4 py-4 text-sm text-on-surface placeholder:text-outline/50 transition-colors duration-300 focus:border-secondary/40 focus:outline-none disabled:cursor-default disabled:opacity-75"
-                />
-              )}
-
-              <p className="px-1 font-display text-[0.52rem] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
-                {evidenceModeMeta.helper}
-              </p>
-            </div>
-
-            <div className="border-t border-outline-variant/10 pt-4">
-              <div className="mb-6 flex items-center justify-between px-1">
-                <span className="font-display text-[0.95rem] font-medium text-on-surface-variant">Proof Fee:</span>
-                <span className="font-display text-[1.55rem] font-bold tracking-[-0.05em] text-secondary">{feeAmount} ETH</span>
-              </div>
-
+            {selectedEvidenceMode === "image" ? (
               <button
                 type="button"
-                onClick={() => void handleSubmit()}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={submission.kind === "loading"}
-                className={cx(
-                  "flex w-full items-center justify-center gap-2 rounded-[1rem] bg-secondary px-5 py-5 font-display text-[1.25rem] font-extrabold tracking-[-0.04em] text-on-secondary shadow-[0_0_20px_rgba(0,207,252,0.3)] transition-all duration-300 active:scale-[0.985]",
-                  submission.kind === "loading"
-                    ? "cursor-wait opacity-85"
-                    : "hover:shadow-[0_0_30px_rgba(0,207,252,0.5)]",
-                )}
+                className="group flex w-full items-center justify-center gap-3 rounded-xl border border-outline-variant/15 bg-surface-container-high px-4 py-4 transition-all duration-300 hover:bg-surface-bright"
+                title={selectedFile?.name}
               >
-                {submission.kind === "loading"
-                  ? draftComment
-                    ? "UPLOADING..."
-                    : "SUBMITTING..."
-                  : submission.kind === "success"
-                    ? "SUBMITTED"
-                    : draftComment
-                      ? "RETRY UPLOAD"
-                      : "SUBMIT VERDICT"}
-                <Icon name="security" filled className="text-[1.2rem]" />
+                <Icon
+                  name="attachment"
+                  className="text-[1.25rem] text-secondary transition-transform duration-300 group-hover:scale-110"
+                />
+                <span className="max-w-[14rem] truncate font-display text-[0.95rem] font-semibold tracking-[-0.02em] text-on-surface">
+                  {selectedFile?.name ?? evidenceModeMeta.placeholder}
+                </span>
               </button>
-            </div>
+            ) : (
+              <input
+                type={selectedEvidenceMode === "tx" ? "text" : "url"}
+                value={evidenceValue}
+                onChange={(event) => setEvidenceValue(event.target.value)}
+                disabled={submission.kind === "loading"}
+                placeholder={evidenceModeMeta.placeholder}
+                className="w-full rounded-xl border border-transparent bg-surface-container-lowest px-4 py-4 text-sm text-on-surface placeholder:text-outline/50 transition-colors duration-300 focus:border-secondary/40 focus:outline-none disabled:cursor-default disabled:opacity-75"
+              />
+            )}
 
-            <div aria-live="polite" className="min-h-4 text-center">
-              {submission.kind === "success" ? (
-                <p className="font-display text-[0.56rem] font-bold uppercase tracking-[0.2em] text-primary">
-                  {submission.message}
-                </p>
-              ) : null}
-              {submission.kind === "error" ? (
-                <p className="font-display text-[0.56rem] font-bold uppercase tracking-[0.2em] text-tertiary">
-                  {submission.message}
-                </p>
-              ) : null}
-            </div>
-
-            <p className="text-center font-display text-[0.56rem] font-bold uppercase tracking-[0.24em] text-outline opacity-60">
-              All entries are permanent on-chain.
+            <p className="px-1 font-display text-[0.52rem] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
+              {evidenceModeMeta.helper}
             </p>
           </div>
-        </WalletGate>
+
+          <div className="border-t border-outline-variant/10 pt-4">
+            <div className="mb-6 flex items-center justify-between px-1">
+              <span className="font-display text-[0.95rem] font-medium text-on-surface-variant">Proof Fee:</span>
+              <span className="font-display text-[1.55rem] font-bold tracking-[-0.05em] text-secondary">{feeAmount} ETH</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={submission.kind === "loading"}
+              className={cx(
+                "flex w-full items-center justify-center gap-2 rounded-[1rem] bg-secondary px-5 py-5 font-display text-[1.25rem] font-extrabold tracking-[-0.04em] text-on-secondary shadow-[0_0_20px_rgba(0,207,252,0.3)] transition-all duration-300 active:scale-[0.985]",
+                submission.kind === "loading"
+                  ? "cursor-wait opacity-85"
+                  : "hover:shadow-[0_0_30px_rgba(0,207,252,0.5)]",
+              )}
+            >
+              {submission.kind === "loading"
+                ? draftComment
+                  ? "UPLOADING..."
+                  : "SUBMITTING..."
+                : submission.kind === "success"
+                  ? "SUBMITTED"
+                  : draftComment
+                    ? "RETRY UPLOAD"
+                    : "SUBMIT VERDICT"}
+              <Icon name="security" filled className="text-[1.2rem]" />
+            </button>
+          </div>
+
+          <div aria-live="polite" className="min-h-4 text-center">
+            {submission.kind === "success" ? (
+              <p className="font-display text-[0.56rem] font-bold uppercase tracking-[0.2em] text-primary">
+                {submission.message}
+              </p>
+            ) : null}
+            {submission.kind === "error" ? (
+              <p className="font-display text-[0.56rem] font-bold uppercase tracking-[0.2em] text-tertiary">
+                {submission.message}
+              </p>
+            ) : null}
+          </div>
+
+          <p className="text-center font-display text-[0.56rem] font-bold uppercase tracking-[0.24em] text-outline opacity-60">
+            All entries are permanent on-chain.
+          </p>
+        </div>
       </motion.div>
     </motion.div>
   );

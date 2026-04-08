@@ -1,47 +1,70 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useState, type ReactNode } from "react";
-import { useWalletSession } from "@/components/wallet-session-provider";
+import { Icon } from "@/components/ui";
 import { cx } from "@/lib/utils";
 
-type WalletGateProps = {
-  children: ReactNode;
-  variant?: "overlay" | "replace";
+export type WalletPromptOptions = {
   title?: string;
   message?: string;
   buttonLabel?: string;
   className?: string;
-  contentClassName?: string;
   cardClassName?: string;
   buttonClassName?: string;
   eyebrow?: ReactNode;
   footer?: ReactNode;
 };
 
-export function WalletGate({
-  children,
-  variant = "overlay",
+type WalletConnectPromptProps = WalletPromptOptions & {
+  busy?: boolean;
+  error?: string | null;
+  onConnect: () => Promise<void> | void;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  showDismiss?: boolean;
+};
+
+function resolvedButtonLabel({
+  walletBusy,
+  buttonLabel,
+  connectError,
+  error,
+}: {
+  walletBusy: boolean;
+  buttonLabel?: string;
+  connectError: string | null;
+  error?: string | null;
+}) {
+  if (walletBusy) {
+    return "Connecting...";
+  }
+
+  if (buttonLabel) {
+    return buttonLabel;
+  }
+
+  return error || connectError ? "Retry Wallet" : "Connect Wallet";
+}
+
+export function WalletConnectPrompt({
   title = "Connect wallet to continue",
   message = "Connect your wallet to unlock this action.",
   buttonLabel,
+  busy = false,
+  error,
   className,
-  contentClassName,
   cardClassName,
   buttonClassName,
   eyebrow,
   footer,
-}: WalletGateProps) {
-  const { session, status, error, connect } = useWalletSession();
+  onConnect,
+  onSuccess,
+  onCancel,
+  showDismiss = false,
+}: WalletConnectPromptProps) {
   const [connectError, setConnectError] = useState<string | null>(null);
-
-  if (session) {
-    return <>{children}</>;
-  }
-
-  const walletBusy = status === "connecting" || status === "disconnecting";
-  const resolvedButtonLabel = walletBusy
-    ? "Connecting..."
-    : buttonLabel ?? (error || connectError ? "Retry Wallet" : "Connect Wallet");
+  const walletBusy = busy;
 
   async function handleConnect() {
     if (walletBusy) {
@@ -50,7 +73,8 @@ export function WalletGate({
 
     try {
       setConnectError(null);
-      await connect();
+      await onConnect();
+      onSuccess?.();
     } catch (nextError) {
       if (nextError instanceof Error && nextError.message.trim()) {
         setConnectError(nextError.message);
@@ -61,46 +85,115 @@ export function WalletGate({
     }
   }
 
-  const gateCard = (
-    <div
-      className={cx(
-        "mx-auto flex w-full max-w-[20rem] flex-col items-center rounded-[1.5rem] border border-white/8 bg-surface-container-high/95 px-5 py-5 text-center shadow-[0_24px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl",
-        cardClassName,
-      )}
-    >
-      {eyebrow ? <div className="mb-4">{eyebrow}</div> : null}
-      <h3 className="font-display text-[1.3rem] font-black tracking-[-0.06em] text-white">{title}</h3>
-      <p className="mt-3 text-sm leading-7 text-on-surface-variant">{message}</p>
-      {footer ? <div className="mt-5 w-full">{footer}</div> : null}
-      <button
-        type="button"
-        onClick={() => void handleConnect()}
-        disabled={walletBusy}
+  return (
+    <div className={cx("mx-auto w-full", className)}>
+      <div
         className={cx(
-          "mt-5 rounded-xl border border-secondary/20 bg-secondary/10 px-6 py-3 font-display text-[0.72rem] font-bold uppercase tracking-[0.2em] text-secondary transition-colors duration-300 hover:bg-secondary/16 disabled:cursor-not-allowed disabled:opacity-70",
-          buttonClassName,
+          "mx-auto flex w-full max-w-[20rem] flex-col items-center rounded-[1.5rem] border border-white/8 bg-surface-container-high/95 px-5 py-5 text-center shadow-[0_24px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl",
+          cardClassName,
         )}
       >
-        {resolvedButtonLabel}
-      </button>
-      {connectError || error ? (
-        <p aria-live="polite" className="mt-3 text-center font-display text-[0.56rem] font-bold uppercase tracking-[0.18em] text-tertiary">
-          {connectError ?? error}
-        </p>
-      ) : null}
+        {showDismiss ? (
+          <div className="mb-3 flex w-full justify-end">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-full p-1 text-on-surface-variant transition-colors hover:text-white"
+              aria-label="Close wallet dialog"
+            >
+              <Icon name="close" className="text-[1.1rem]" />
+            </button>
+          </div>
+        ) : null}
+
+        {eyebrow ? <div className="mb-4">{eyebrow}</div> : null}
+        <h3 className="font-display text-[1.3rem] font-black tracking-[-0.06em] text-white">{title}</h3>
+        <p className="mt-3 text-sm leading-7 text-on-surface-variant">{message}</p>
+        {footer ? <div className="mt-5 w-full">{footer}</div> : null}
+        <button
+          type="button"
+          onClick={() => void handleConnect()}
+          disabled={walletBusy}
+          className={cx(
+            "mt-5 rounded-xl border border-secondary/20 bg-secondary/10 px-6 py-3 font-display text-[0.72rem] font-bold uppercase tracking-[0.2em] text-secondary transition-colors duration-300 hover:bg-secondary/16 disabled:cursor-not-allowed disabled:opacity-70",
+            buttonClassName,
+          )}
+        >
+          {resolvedButtonLabel({ walletBusy, buttonLabel, connectError, error })}
+        </button>
+        {connectError || error ? (
+          <p aria-live="polite" className="mt-3 text-center font-display text-[0.56rem] font-bold uppercase tracking-[0.18em] text-tertiary">
+            {connectError ?? error}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
+}
 
-  if (variant === "replace") {
-    return <div className={cx("relative", className)}>{gateCard}</div>;
-  }
+type WalletConnectDialogProps = WalletPromptOptions & {
+  open: boolean;
+  busy?: boolean;
+  error?: string | null;
+  onConnect: () => Promise<void> | void;
+  onClose: () => void;
+  onSuccess: () => void;
+};
 
+export function WalletConnectDialog({
+  open,
+  busy,
+  error,
+  onConnect,
+  onClose,
+  onSuccess,
+  title,
+  message,
+  buttonLabel,
+  className,
+  cardClassName,
+  buttonClassName,
+  eyebrow,
+  footer,
+}: WalletConnectDialogProps) {
   return (
-    <div className={cx("relative", className)}>
-      <div aria-hidden className={cx("transition-all duration-300 pointer-events-none select-none opacity-40 blur-[3px]", contentClassName)}>
-        {children}
-      </div>
-      <div className="absolute inset-0 z-10 flex items-center justify-center p-4">{gateCard}</div>
-    </div>
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+          className="fixed inset-0 z-[140] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-[22rem]"
+          >
+            <WalletConnectPrompt
+              title={title}
+              message={message}
+              buttonLabel={buttonLabel}
+              busy={busy}
+              error={error}
+              className={className}
+              cardClassName={cardClassName}
+              buttonClassName={buttonClassName}
+              eyebrow={eyebrow}
+              footer={footer}
+              onConnect={onConnect}
+              onSuccess={onSuccess}
+              onCancel={onClose}
+              showDismiss
+            />
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }

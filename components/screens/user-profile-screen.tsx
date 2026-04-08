@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { MobileShell } from "@/components/app-shell";
-import { WalletGate } from "@/components/wallet-gate";
+import { WalletConnectPrompt } from "@/components/wallet-gate";
 import { useWalletSession } from "@/components/wallet-session-provider";
 import { Icon, ImageCard } from "@/components/ui";
 import { brandAvatar, navItems } from "@/lib/mock-data";
@@ -165,10 +165,11 @@ function DesktopTopNav({ avatar }: { avatar: string }) {
 }
 
 export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
-  const { session } = useWalletSession();
+  const { session, connect, status, error } = useWalletSession();
   const avatar = userProfile?.heroAvatar ?? session?.avatarUrl ?? brandAvatar;
   const eyebrow = shortWallet(userProfile?.profile.walletAddress);
   const progressWidth = clamp(userProfile?.profile.influenceWeight ?? 14, 14, 100);
+  const walletBusy = status === "connecting" || status === "disconnecting";
 
   return (
     <>
@@ -269,24 +270,25 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
               </section>
             </>
           ) : (
-            <WalletGate
-              variant="replace"
-              className="pt-4"
-              title="Connect Wallet"
-              message="Connect your wallet to load your live reputation ledger, recent activity, and trust clusters."
-              eyebrow={
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-surface-container-low px-4 py-1.5">
-                  <Icon name="account_balance_wallet" className="text-[0.9rem] text-secondary" />
-                  <span className="font-display text-[0.62rem] font-bold uppercase tracking-[0.18em] text-secondary">
-                    Wallet Required
-                  </span>
-                </div>
-              }
-              footer={<EmptyMessage message="No authenticated profile session found." className="py-6 text-center" />}
-              cardClassName="space-y-0 rounded-[1.5rem] border border-white/5 bg-surface-container-low px-6 py-6 shadow-[0_24px_48px_rgba(0,0,0,0.4)]"
-            >
-              <div />
-            </WalletGate>
+            <div className="pt-4">
+              <WalletConnectPrompt
+                title="Connect Wallet"
+                message="Connect your wallet to load your live reputation ledger, recent activity, and trust clusters."
+                busy={walletBusy}
+                error={error}
+                eyebrow={
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-surface-container-low px-4 py-1.5">
+                    <Icon name="account_balance_wallet" className="text-[0.9rem] text-secondary" />
+                    <span className="font-display text-[0.62rem] font-bold uppercase tracking-[0.18em] text-secondary">
+                      Account View
+                    </span>
+                  </div>
+                }
+                footer={<EmptyMessage message="Connect your wallet to load your account-specific profile." className="py-6 text-center" />}
+                cardClassName="space-y-0 rounded-[1.5rem] border border-white/5 bg-surface-container-low px-6 py-6 shadow-[0_24px_48px_rgba(0,0,0,0.4)]"
+                onConnect={connect}
+              />
+            </div>
           )}
         </motion.section>
       </MobileShell>
@@ -531,23 +533,24 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.34, ease: [0.2, 0, 0, 1] }}
               >
-                <WalletGate
-                  variant="replace"
+                <WalletConnectPrompt
                   title="Connect Wallet"
                   message="Connect your wallet to load your real profile metrics, recent activity, trust clusters, and reputation artifacts."
+                  busy={walletBusy}
+                  error={error}
                   eyebrow={
                     <div className="inline-flex items-center gap-2 rounded-full border border-secondary/20 bg-secondary-container/30 px-4 py-1.5">
                       <Icon name="account_balance_wallet" className="text-[0.9rem] text-secondary" />
                       <span className="font-display text-[0.62rem] font-bold uppercase tracking-[0.18em] text-secondary">
-                        Wallet Required
+                        Account View
                       </span>
                     </div>
                   }
+                  footer={<EmptyMessage message="Connect your wallet to load your account-specific profile." className="py-6 text-left" />}
                   cardClassName="max-w-2xl items-start rounded-xl border border-white/5 bg-surface-container-low p-10 text-left shadow-[0_24px_48px_rgba(0,0,0,0.4)]"
                   buttonClassName="mt-3 rounded-xl border border-secondary/20 bg-secondary/10 px-6 py-3 font-display text-[0.72rem] font-bold uppercase tracking-[0.2em] text-secondary transition-colors duration-300 hover:bg-secondary/16"
-                >
-                  <div />
-                </WalletGate>
+                  onConnect={connect}
+                />
               </motion.section>
             )}
           </div>

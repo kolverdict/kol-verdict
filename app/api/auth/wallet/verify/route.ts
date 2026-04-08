@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { apiErrorResponse, apiSuccessResponse } from "@/lib/backend/errors";
 import { createSessionPayload, upsertProfileFromWallet, verifySolanaWalletSignature } from "@/lib/backend/auth";
-import { createApiRequestContext } from "@/lib/backend/logging";
+import { createApiRequestContext, hashSensitiveValue } from "@/lib/backend/logging";
 import { assertRateLimit } from "@/lib/backend/rate-limit";
 import { assertWalletChallenge, clearWalletChallenge, createAppSession, readWalletChallenge, writeAppSession } from "@/lib/insforge/session";
 import type { WalletVerifyResponse } from "@/lib/types/api";
@@ -16,15 +16,25 @@ const requestSchema = z.object({
 
 export async function POST(request: Request) {
   const requestContext = createApiRequestContext(request, "api.auth.wallet.verify", { noStore: true });
+  let step = "rate_limit";
+  let walletAddressHash: string | null = null;
+  let challengePresent = false;
 
   try {
     await assertRateLimit(request, "walletVerify");
+    step = "parse_request";
     const body = requestSchema.parse(await request.json());
+    walletAddressHash = hashSensitiveValue(body.walletAddress);
+    step = "read_wallet_challenge";
     const challenge = await readWalletChallenge();
+    challengePresent = Boolean(challenge);
 
+    step = "assert_wallet_challenge";
     assertWalletChallenge(challenge, body.walletAddress, body.message);
+    step = "verify_wallet_signature";
     verifySolanaWalletSignature(body.walletAddress, body.message, body.signature);
 
+    step = "upsert_profile";
     const profile = await upsertProfileFromWallet({
       walletAddress: body.walletAddress,
       walletChain: "solana",
@@ -32,6 +42,7 @@ export async function POST(request: Request) {
       avatarUrl: body.avatarUrl ?? null,
     });
     requestContext.profileId = profile.id;
+    step = "write_app_session";
     const session = createAppSession(createSessionPayload(profile));
     const response = apiSuccessResponse<WalletVerifyResponse>(
       {
@@ -48,6 +59,22 @@ export async function POST(request: Request) {
     writeAppSession(response.cookies, session);
     return response;
   } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error(
+        JSON.stringify({
+          scope: "wallet_auth",
+          level: "error",
+          route: requestContext.route,
+          requestId: requestContext.requestId,
+          step,
+          walletAddressHash,
+          challengePresent,
+          profileId: requestContext.profileId ?? null,
+          message: error instanceof Error ? error.message : "Unknown wallet verify failure",
+        }),
+      );
+    }
+
     return apiErrorResponse(error, { context: requestContext });
   }
 }

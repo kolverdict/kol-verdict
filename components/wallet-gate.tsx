@@ -44,11 +44,11 @@ function resolvedButtonLabel({
     return buttonLabel;
   }
 
-  return error || connectError ? "Retry Wallet" : "Connect Wallet";
+  return error || connectError ? "Retry connection" : "Connect Phantom";
 }
 
 export function WalletConnectPrompt({
-  title = "Connect wallet to continue",
+  title = "Connect wallet to submit your verdict",
   message = "Connect your wallet to unlock this action.",
   buttonLabel,
   busy = false,

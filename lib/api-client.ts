@@ -6,6 +6,7 @@ export class ApiClientError extends Error {
     public readonly statusCode: number,
     public readonly code?: string,
     public readonly retryAfter?: number | null,
+    public readonly requestId?: string | null,
   ) {
     super(message);
     this.name = "ApiClientError";
@@ -13,7 +14,22 @@ export class ApiClientError extends Error {
 }
 
 export async function parseApiResponse<T>(response: Response) {
-  const result = (await response.json()) as ApiResponse<T>;
+  const requestId = response.headers.get("x-request-id");
+  const retryAfter = Number(response.headers.get("Retry-After")) || null;
+  const payload = await response.text();
+  let result: ApiResponse<T>;
+
+  try {
+    result = JSON.parse(payload) as ApiResponse<T>;
+  } catch {
+    throw new ApiClientError(
+      "Invalid API response.",
+      response.status || 500,
+      "invalid_response",
+      retryAfter,
+      requestId,
+    );
+  }
 
   if (!response.ok || !result.ok) {
     const message = result.ok ? "Request failed." : result.error.message;
@@ -22,7 +38,8 @@ export async function parseApiResponse<T>(response: Response) {
       message,
       response.status || (result.ok ? 500 : result.error.statusCode),
       code,
-      Number(response.headers.get("Retry-After")) || null,
+      retryAfter,
+      requestId,
     );
   }
 

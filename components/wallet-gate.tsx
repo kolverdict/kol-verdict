@@ -89,7 +89,7 @@ export function WalletConnectPrompt({
     <div className={cx("mx-auto w-full", className)}>
       <div
         className={cx(
-          "mx-auto flex w-full max-w-[20rem] flex-col items-center rounded-[1.5rem] border border-white/8 bg-surface-container-high/95 px-5 py-5 text-center shadow-[0_24px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl",
+          "mx-auto flex w-full max-w-[20rem] flex-col items-center rounded-[1.35rem] border border-white/8 bg-surface-container-high/95 px-5 py-5 text-center shadow-surface backdrop-blur-xl",
           cardClassName,
         )}
       >
@@ -98,7 +98,7 @@ export function WalletConnectPrompt({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-full p-1 text-on-surface-variant transition-colors hover:text-white"
+              className="kv-focus-ring rounded-full p-1 text-on-surface-variant transition-colors hover:text-white"
               aria-label="Close wallet dialog"
             >
               <Icon name="close" className="text-[1.1rem]" />
@@ -107,15 +107,15 @@ export function WalletConnectPrompt({
         ) : null}
 
         {eyebrow ? <div className="mb-4">{eyebrow}</div> : null}
-        <h3 className="font-display text-[1.3rem] font-black tracking-[-0.06em] text-white">{title}</h3>
-        <p className="mt-3 text-sm leading-7 text-on-surface-variant">{message}</p>
+        <h3 className="font-display text-[1.25rem] font-black tracking-[-0.035em] text-white [word-spacing:0.08em]">{title}</h3>
+        <p className="mt-3 text-sm leading-6 text-on-surface-variant">{message}</p>
         {footer ? <div className="mt-5 w-full">{footer}</div> : null}
         <button
           type="button"
           onClick={() => void handleConnect()}
           disabled={walletBusy}
           className={cx(
-            "mt-5 rounded-xl border border-secondary/20 bg-secondary/10 px-6 py-3 font-display text-[0.72rem] font-bold uppercase tracking-[0.2em] text-secondary transition-colors duration-300 hover:bg-secondary/16 disabled:cursor-not-allowed disabled:opacity-70",
+            "kv-focus-ring mt-5 rounded-xl border border-secondary/22 bg-secondary/12 px-6 py-3 font-label text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-secondary transition-colors duration-200 hover:bg-secondary/18 disabled:cursor-not-allowed disabled:opacity-70",
             buttonClassName,
           )}
         >
@@ -164,7 +164,7 @@ export function WalletConnectDialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-          className="fixed inset-0 z-[140] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md"
+          className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/62 px-4 py-6 backdrop-blur-md sm:items-center"
           onClick={onClose}
         >
           <motion.div

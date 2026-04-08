@@ -71,16 +71,16 @@ function Field({
       <label
         htmlFor={id}
         className={cx(
-          "mb-3 ml-1 block font-display text-xs font-bold uppercase tracking-widest",
+          "kv-label mb-2 block",
           accent === "secondary" ? "text-secondary" : "text-on-surface-variant",
         )}
       >
         {label}
       </label>
 
-      <div className="relative overflow-hidden rounded-xl bg-surface-container-lowest">
+      <div className="relative overflow-hidden rounded-xl border border-white/8 bg-surface-container-lowest transition-colors focus-within:border-secondary/45">
         {prefix ? (
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-display text-[1.4rem] tracking-[-0.04em] text-on-surface-variant">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[1.25rem] tracking-[-0.04em] text-on-surface-variant">
             {prefix}
           </span>
         ) : null}
@@ -92,14 +92,11 @@ function Field({
           placeholder={placeholder}
           disabled={disabled}
           className={cx(
-            "w-full bg-transparent px-4 py-4 text-on-surface placeholder:text-zinc-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60",
+            "kv-focus-ring h-12 w-full bg-transparent px-4 text-base text-on-surface placeholder:text-on-surface-variant/45 disabled:cursor-not-allowed disabled:opacity-60",
             prefix ? "pl-10 pr-4" : "px-4",
-            displayFont ? "font-display text-lg tracking-[-0.04em]" : "font-display tracking-[-0.03em]",
+            displayFont ? "tracking-[-0.03em]" : "",
           )}
         />
-        {accent === "secondary" ? (
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 bg-secondary transition-transform duration-500 group-focus-within:scale-x-100" />
-        ) : null}
       </div>
     </div>
   );
@@ -125,28 +122,28 @@ function RegistryPreview({
   return (
     <div
       className={cx(
-        "relative overflow-hidden rounded-[2rem] border border-outline-variant/10 bg-surface-container-high shadow-[0px_24px_48px_rgba(0,0,0,0.4)]",
-        compact ? "p-8" : "p-8",
+        "relative overflow-hidden rounded-[1.4rem] border border-white/8 bg-surface-container-high shadow-surface",
+        compact ? "p-5" : "p-6",
       )}
     >
-      <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-secondary/5 blur-[80px]" />
+      <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-secondary/4 blur-[80px]" />
 
-      <div className="relative flex items-center gap-6">
-        <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-secondary/20 bg-surface-container-highest">
+      <div className="relative flex items-center gap-4">
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-secondary/20 bg-surface-container-highest">
           {avatarUrl && avatarStatus === "ready" ? (
             <Image
               src={avatarUrl}
               alt={`@${username} avatar preview`}
               fill
-              sizes="80px"
+              sizes="64px"
               className="object-cover"
             />
           ) : hasUsername ? (
-            <span className="font-display text-[1.4rem] font-black uppercase tracking-[-0.08em] text-white">
+            <span className="font-display text-[1.25rem] font-bold uppercase tracking-[-0.08em] text-white">
               {initials}
             </span>
           ) : (
-            <Icon name="person" className="text-4xl text-zinc-600" />
+            <Icon name="person" className="text-3xl text-on-surface-variant/45" />
           )}
 
           {avatarStatus === "loading" ? (
@@ -159,7 +156,7 @@ function RegistryPreview({
         <div className="min-w-0 flex-1 space-y-1">
           {hasUsername ? (
             <>
-              <div className="truncate font-display text-[1.15rem] font-bold tracking-[-0.04em] text-white">@{username}</div>
+              <div className="truncate font-display text-[1.05rem] font-bold tracking-[-0.04em] text-white">@{username}</div>
               <div className="truncate text-sm text-on-surface-variant">
                 {normalizedWallet ? `${normalizedWallet.slice(0, 6)}...${normalizedWallet.slice(-4)}` : "Pending wallet signature"}
               </div>
@@ -173,7 +170,7 @@ function RegistryPreview({
         </div>
 
         <div className="text-right">
-          <div className="font-display text-[10px] font-bold uppercase tracking-tighter text-zinc-500">Initial Trust</div>
+          <div className="font-label text-[0.55rem] font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Initial Trust</div>
           <div className="font-display text-2xl font-bold text-primary">0.00</div>
         </div>
       </div>
@@ -327,53 +324,74 @@ function AddKolContent({ compact = false }: { compact?: boolean }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.34, ease: [0.2, 0, 0, 1] }}
-      className="relative space-y-8"
+      className="relative"
     >
-      <form className="space-y-8" onSubmit={handleSubmit}>
-        <div className="mb-12">
-          <h1
-            className={cx(
-              "font-display font-extrabold leading-none tracking-[-0.06em] text-white",
-              compact ? "text-4xl" : "text-[2.85rem]",
-            )}
-          >
-            REGISTER NEW KOL
-          </h1>
-          <p className="mt-2 max-w-[26rem] text-base leading-7 text-on-surface-variant">
-            Onboard a key opinion leader to the decentralized reputation registry.
-          </p>
+      <form className={cx("grid gap-6", compact ? "grid-cols-1" : "md:grid-cols-[0.92fr_1.08fr]")} onSubmit={handleSubmit}>
+        <div className={cx("space-y-6", compact ? "" : "rounded-[1.5rem] border border-white/8 bg-surface-container-low p-6 shadow-surface")}>
+          <div>
+            <div className="kv-label mb-2 text-secondary">Registry Entry</div>
+            <h1
+              className={cx(
+                "font-display font-bold leading-none tracking-[-0.045em] text-white [word-spacing:0.08em]",
+                compact ? "text-[2.35rem]" : "text-[2.75rem]",
+              )}
+            >
+              REGISTER NEW KOL
+            </h1>
+            <p className="mt-3 max-w-[28rem] text-sm leading-6 text-on-surface-variant">
+              Add an X profile to the live reputation registry. Wallet address is optional.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            <Field
+              id={usernameId}
+              label="X (Twitter) Username"
+              placeholder="elonmusk"
+              value={username}
+              onChange={handleUsernameChange}
+              accent="secondary"
+              prefix="@"
+              displayFont
+              disabled={isSubmitting}
+            />
+
+            <Field
+              id={walletId}
+              label="Wallet Address (Optional)"
+              placeholder="0x..."
+              value={wallet}
+              onChange={(value) => {
+                setWallet(value);
+                if (submission.kind !== "idle") {
+                  setSubmission({ kind: "idle" });
+                }
+              }}
+              disabled={isSubmitting}
+            />
+
+          </div>
+
+          <div className={cx("pt-2", compact ? "hidden" : "")}>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={cx(
+                "kv-focus-ring w-full rounded-xl border border-secondary/25 bg-secondary/14 px-6 py-4 font-label text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-secondary transition-[background-color,transform,opacity] duration-200",
+                isSubmitting ? "cursor-wait opacity-85" : "hover:-translate-y-0.5 hover:bg-secondary/20 active:scale-[0.985]",
+              )}
+            >
+              {submission.kind === "loading"
+                ? "Submitting..."
+                : submission.kind === "success"
+                  ? "Registered"
+                  : "Submit to Registry"}
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-6">
-          <Field
-            id={usernameId}
-            label="X (Twitter) Username"
-            placeholder="elonmusk"
-            value={username}
-            onChange={handleUsernameChange}
-            accent="secondary"
-            prefix="@"
-            displayFont
-            disabled={isSubmitting}
-          />
-
-          <Field
-            id={walletId}
-            label="Wallet Address (Optional)"
-            placeholder="0x..."
-            value={wallet}
-            onChange={(value) => {
-              setWallet(value);
-              if (submission.kind !== "idle") {
-                setSubmission({ kind: "idle" });
-              }
-            }}
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div className="mt-12">
-          <div className="mb-4 ml-0.5 font-display text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+        <div className={cx("space-y-4", compact ? "" : "rounded-[1.5rem] border border-white/8 bg-surface-container-low p-6 shadow-surface")}>
+          <div className="kv-label text-on-surface-variant">
             Registry Preview
           </div>
           <RegistryPreview
@@ -383,45 +401,43 @@ function AddKolContent({ compact = false }: { compact?: boolean }) {
             avatarStatus={avatarLookupStatus}
             compact={compact}
           />
-        </div>
 
-        <p className="mt-5 text-center text-sm text-on-surface-variant">
-          This profile will be publicly verified by the community
-        </p>
+          <p className="text-sm leading-6 text-on-surface-variant">
+            Public profile, community verdicts, and evidence links will be attached to this registry record.
+          </p>
 
-        <div className="pt-8">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={cx(
-              "w-full rounded-full bg-[linear-gradient(135deg,#00cffc_0%,#00677f_100%)] px-6 py-5 font-display text-lg font-bold tracking-tight text-on-background shadow-[0px_8px_24px_rgba(0,207,252,0.3)] transition-all duration-200",
-              isSubmitting
-                ? "cursor-wait opacity-85"
-                : "hover:-translate-y-0.5 active:scale-[0.985]",
-            )}
-          >
-            {submission.kind === "loading"
-              ? "SUBMITTING..."
-              : submission.kind === "success"
-                ? "REGISTERED"
-                : "SUBMIT TO REGISTRY"}
-          </button>
+          <div className={cx("pt-2", compact ? "" : "hidden")}>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={cx(
+                "kv-focus-ring w-full rounded-xl border border-secondary/25 bg-secondary/14 px-6 py-4 font-label text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-secondary transition-[background-color,transform,opacity] duration-200",
+                isSubmitting ? "cursor-wait opacity-85" : "hover:-translate-y-0.5 hover:bg-secondary/20 active:scale-[0.985]",
+              )}
+            >
+              {submission.kind === "loading"
+                ? "Submitting..."
+                : submission.kind === "success"
+                  ? "Registered"
+                  : "Submit to Registry"}
+            </button>
+          </div>
 
           <div aria-live="polite" className="min-h-6 pt-4 text-center">
             {submission.kind === "success" ? (
-              <p className="font-display text-[0.7rem] font-bold uppercase tracking-[0.18em] text-primary">
+              <p className="font-label text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-primary">
                 {submission.message}
               </p>
             ) : null}
 
             {submission.kind === "error" ? (
-              <p className="font-display text-[0.7rem] font-bold uppercase tracking-[0.18em] text-tertiary">
+              <p className="font-label text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-tertiary">
                 {submission.message}
               </p>
             ) : null}
           </div>
 
-          <p className="mt-2 text-center font-display text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">
+          <p className="text-center font-label text-[0.56rem] font-semibold uppercase tracking-[0.14em] text-on-surface-variant/55">
             Transaction Gas Fees Apply
           </p>
         </div>
@@ -434,9 +450,8 @@ export function AddKolScreen() {
   return (
     <>
       <MobileShell navKey="add" avatar={brandAvatar}>
-        <div className="relative mx-auto max-w-2xl px-1">
-          <div className="pointer-events-none absolute left-[-3rem] top-48 h-40 w-40 rounded-full bg-secondary/6 blur-[90px]" />
-          <div className="pointer-events-none absolute right-[-4rem] top-[28rem] h-48 w-40 rounded-full bg-secondary/5 blur-[100px]" />
+        <div className="relative mx-auto max-w-[26rem] px-0">
+          <div className="pointer-events-none absolute right-[-4rem] top-28 h-40 w-40 rounded-full bg-secondary/5 blur-[90px]" />
           <AddKolContent compact />
         </div>
       </MobileShell>
@@ -449,10 +464,9 @@ export function AddKolScreen() {
         railButtonVariant="ghost"
       >
         <div className="relative">
-          <div className="pointer-events-none absolute left-12 top-16 h-48 w-48 rounded-full bg-secondary/5 blur-[110px]" />
-          <div className="pointer-events-none absolute right-0 top-32 h-64 w-64 rounded-full bg-secondary/4 blur-[130px]" />
+          <div className="pointer-events-none absolute left-20 top-10 h-48 w-48 rounded-full bg-secondary/4 blur-[110px]" />
 
-          <div className="mx-auto max-w-[34rem] py-6">
+          <div className="kv-page-tight">
             <AddKolContent />
           </div>
         </div>

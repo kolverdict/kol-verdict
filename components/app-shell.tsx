@@ -9,7 +9,7 @@ import { cx } from "@/lib/utils";
 import { GhostButton, Icon, ImageCard } from "@/components/ui";
 
 type MobileShellProps = {
-  navKey: NavKey;
+  navKey: NavKey | null;
   avatar: string;
   title?: string;
   eyebrow?: string;
@@ -80,19 +80,19 @@ export function MobileShell({
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background md:hidden">
-      <header className="glass-panel fixed inset-x-0 top-0 z-40 flex h-[5.5rem] items-center justify-between border-b border-white/5 px-5 shadow-[0_24px_48px_rgba(0,0,0,0.35)] md:hidden">
+      <header className="glass-panel fixed inset-x-0 top-0 z-40 flex h-[4.75rem] items-center justify-between border-b border-white/8 px-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)] md:hidden">
         <div className="flex items-center gap-3">
           <ImageCard
             src={avatar}
             alt="KOL Verdict profile avatar"
-            className="h-10 w-10 rounded-2xl border border-outline-variant/30 bg-surface-container-high"
+            className="h-9 w-9 rounded-xl border border-outline-variant/40 bg-surface-container-high"
             sizes="40px"
             priority
           />
           <div className="space-y-0.5">
-            <div className="font-display text-xl font-bold tracking-[-0.05em] text-white">{title}</div>
+            <div className="font-display text-[1.05rem] font-semibold tracking-[-0.04em] text-white">{title}</div>
             {eyebrow ? (
-              <div className="font-display text-[0.5rem] font-bold uppercase tracking-[0.28em] text-primary/70">
+              <div className="font-label text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-primary/80">
                 {eyebrow}
               </div>
             ) : null}
@@ -111,7 +111,7 @@ export function MobileShell({
         </button>
       </header>
 
-      <main className={cx("px-5 pb-[8.2rem] pt-24", className)}>{children}</main>
+      <main className={cx("px-4 pb-[calc(7.25rem+env(safe-area-inset-bottom))] pt-[5.75rem]", className)}>{children}</main>
 
       <motion.nav
         initial={false}
@@ -124,11 +124,11 @@ export function MobileShell({
           ease: [0.2, 0, 0, 1],
         }}
         className={cx(
-          "fixed inset-x-0 bottom-0 z-40 rounded-t-[2rem] border-t border-white/6 bg-[rgba(11,13,16,0.64)] px-3 pb-5 pt-2.5 shadow-[0_-12px_32px_rgba(0,0,0,0.4)] backdrop-blur-[20px] md:hidden",
+          "fixed inset-x-3 bottom-3 z-40 rounded-[1.55rem] border border-white/10 bg-[rgba(11,15,16,0.78)] px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_34px_rgba(0,0,0,0.42)] backdrop-blur-[18px] md:hidden",
           navVisible ? "pointer-events-auto" : "pointer-events-none",
         )}
       >
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-1.5">
           {navItems.map((item) => {
             const active = item.key === navKey;
 
@@ -138,10 +138,10 @@ export function MobileShell({
                 href={item.href}
                 className={cx(
                   "flex flex-col items-center justify-center rounded-[1.3rem] px-2 py-2.5 text-[0.56rem] font-display font-bold uppercase tracking-[0.18em] transition-colors",
-                  active ? "bg-secondary/12 text-secondary" : "text-zinc-500 hover:bg-white/4 hover:text-on-surface",
+                  active ? "bg-secondary/14 text-secondary" : "text-on-surface-variant hover:bg-white/[0.04] hover:text-on-surface",
                 )}
               >
-                <Icon name={item.icon} className="mb-0.5 text-[1.35rem]" filled={active} />
+                <Icon name={item.icon} className="mb-1 text-[1.25rem]" filled={active} />
                 {item.label}
               </Link>
             );
@@ -153,7 +153,7 @@ export function MobileShell({
 }
 
 type DesktopShellProps = {
-  navKey: NavKey;
+  navKey: NavKey | null;
   avatar: string;
   searchPlaceholder?: string;
   topbarIcons?: string[];
@@ -173,15 +173,15 @@ export function DesktopShell({
 }: DesktopShellProps) {
   return (
     <div className="hidden min-h-screen bg-background text-on-surface md:block">
-      <aside className="fixed inset-y-0 left-0 z-40 flex w-[15rem] flex-col border-r border-white/5 bg-[#0c0c0c] px-5 py-6">
+      <aside className="fixed inset-y-0 left-0 z-40 flex w-[14rem] flex-col border-r border-white/8 bg-[rgba(7,9,9,0.96)] px-4 py-5">
         <div className="space-y-1">
-          <div className="font-display text-[1.8rem] font-black uppercase tracking-[-0.06em] text-white">KOL Verdict</div>
-          <div className="font-display text-[0.56rem] font-bold uppercase tracking-[0.28em] text-on-surface-variant">
-            The Obsidian Oracle
+          <div className="font-display text-[1.25rem] font-bold uppercase tracking-[-0.055em] text-white">KOL Verdict</div>
+          <div className="font-label text-[0.56rem] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
+            Verdict Engine
           </div>
         </div>
 
-        <nav className="mt-8 space-y-2">
+        <nav className="mt-7 space-y-1.5">
           {navItems.map((item) => {
             const active = item.key === navKey;
 
@@ -190,8 +190,8 @@ export function DesktopShell({
                 key={item.key}
                 href={item.href}
                 className={cx(
-                  "flex items-center gap-3 rounded-[1rem] px-4 py-3 font-display text-[0.68rem] font-bold uppercase tracking-[0.22em] transition-transform duration-300",
-                  active ? "scale-[1.05] bg-white/10 text-white" : "text-zinc-500 hover:bg-white/4 hover:text-on-surface",
+                  "kv-focus-ring flex items-center gap-3 rounded-[0.95rem] px-3.5 py-3 font-label text-[0.66rem] font-semibold uppercase tracking-[0.16em] transition-colors duration-200",
+                  active ? "bg-white/[0.07] text-white" : "text-on-surface-variant hover:bg-white/[0.04] hover:text-on-surface",
                 )}
               >
                 <Icon
@@ -199,7 +199,7 @@ export function DesktopShell({
                   className={cx("text-[1.15rem]", active ? "text-secondary" : "text-current")}
                   filled={active}
                 />
-                {item.label === "Profile" ? "My Profile" : item.label}
+                {item.label === "Profile" ? "Profile" : item.label}
               </Link>
             );
           })}
@@ -209,7 +209,7 @@ export function DesktopShell({
           {railButtonVariant === "primary" ? (
             <Link
               href="/profile"
-              className="liquid-neon-primary primary-glow flex h-14 items-center justify-center rounded-[1rem] font-display text-[0.7rem] font-bold uppercase tracking-[0.28em]"
+              className="kv-focus-ring flex h-12 items-center justify-center rounded-[0.95rem] border border-primary/25 bg-primary/90 font-label text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-on-primary shadow-[0_12px_26px_rgba(0,0,0,0.28)] transition-colors hover:bg-primary"
             >
               Mint Reputation
             </Link>
@@ -221,10 +221,10 @@ export function DesktopShell({
         </div>
       </aside>
 
-      <div className="min-h-screen pl-[15rem]">
+      <div className="min-h-screen pl-[14rem]">
         <header
           className={cx(
-            "glass-panel fixed left-[15rem] right-0 top-0 z-30 flex h-20 items-center border-b border-white/5 px-8",
+            "glass-panel fixed left-[14rem] right-0 top-0 z-30 flex h-16 items-center border-b border-white/8 px-6",
             searchPlaceholder ? "justify-between" : "justify-end",
           )}
         >
@@ -247,7 +247,7 @@ export function DesktopShell({
                 <button
                   key={icon}
                   type="button"
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl hover:bg-white/5 hover:text-on-surface"
+                  className="kv-focus-ring flex h-10 w-10 items-center justify-center rounded-xl hover:bg-white/[0.05] hover:text-on-surface"
                 >
                   <Icon name={icon} className="text-[1.25rem]" />
                 </button>
@@ -262,7 +262,7 @@ export function DesktopShell({
           </div>
         </header>
 
-        <main className={cx("min-h-screen px-8 pb-12 pt-24", className)}>{children}</main>
+        <main className={cx("min-h-screen px-0 pb-10 pt-16", className)}>{children}</main>
       </div>
     </div>
   );

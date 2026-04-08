@@ -311,7 +311,7 @@ function MobileOverview({ profile }: { profile: KolProfileView }) {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="font-display text-[1.35rem] font-bold tracking-[-0.04em] text-white">Community Verdict</h3>
+          <h3 className="font-display text-[1.35rem] font-bold tracking-[-0.03em] text-white [word-spacing:0.08em]">Community Verdict</h3>
           <button
             type="button"
             className="rounded-xl border border-white/10 bg-surface-container-highest px-3 py-2 font-display text-[0.54rem] font-bold uppercase tracking-[0.16em] text-white"
@@ -335,7 +335,7 @@ function MobileComments({ profile }: { profile: KolProfileView }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-[1.35rem] font-bold tracking-[-0.04em] text-white">Community Verdict</h3>
+        <h3 className="font-display text-[1.35rem] font-bold tracking-[-0.03em] text-white [word-spacing:0.08em]">Community Verdict</h3>
         <span className="font-display text-[0.54rem] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
           {profile.comments.length} verdicts
         </span>
@@ -410,7 +410,7 @@ function DesktopOverview({
     <div className="space-y-8">
       <section className="rounded-[1.25rem] border border-white/5 bg-[linear-gradient(180deg,rgba(14,24,18,0.94),rgba(10,18,15,0.98))] px-6 py-6 shadow-[0_24px_48px_rgba(0,0,0,0.32)]">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-display text-[1.9rem] font-bold tracking-[-0.05em] text-white">Reputation Heatmap</h2>
+          <h2 className="font-display text-[1.9rem] font-bold tracking-[-0.035em] text-white [word-spacing:0.08em]">Reputation Heatmap</h2>
           <span className="font-display text-[0.58rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
             Last 12 Months
           </span>
@@ -430,23 +430,25 @@ function DesktopOverview({
           </div>
           <div className="flex h-12 overflow-hidden rounded-lg border border-white/5">
             <div
-              className="flex h-full items-center justify-center bg-primary px-4 font-display text-[0.56rem] font-black uppercase tracking-[0.14em] text-on-primary"
+              aria-label={`Bullish ${bullish}%`}
+              className="h-full bg-primary"
               style={{ width: `${bullish}%` }}
-            >
-              Bullish
-            </div>
+            />
             <div
-              className="flex h-full items-center justify-center bg-surface-container-highest px-4 font-display text-[0.56rem] font-black uppercase tracking-[0.14em] text-white"
+              aria-label={`Neutral ${neutral}%`}
+              className="h-full bg-surface-container-highest"
               style={{ width: `${neutral}%` }}
-            >
-              Neutral
-            </div>
+            />
             <div
-              className="flex h-full items-center justify-center bg-tertiary px-4 font-display text-[0.56rem] font-black uppercase tracking-[0.14em] text-on-tertiary"
+              aria-label={`Risk ${risk}%`}
+              className="h-full bg-tertiary"
               style={{ width: `${risk}%` }}
-            >
-              Risk
-            </div>
+            />
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 font-label text-[0.54rem] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
+            <span>Bullish {bullish}%</span>
+            <span>Neutral {neutral}%</span>
+            <span>Risk {risk}%</span>
           </div>
         </section>
 
@@ -470,7 +472,7 @@ function DesktopOverview({
       </div>
 
       <section className="space-y-4">
-        <h2 className="font-display text-[1.9rem] font-bold tracking-[-0.05em] text-white">Recent Proof Points</h2>
+        <h2 className="font-display text-[1.9rem] font-bold tracking-[-0.035em] text-white [word-spacing:0.08em]">Recent Proof Points</h2>
         <div className="space-y-px rounded-[1rem] bg-white/5">
           {profile.proofPoints.map((item, index) => (
             <ProofPointRow
@@ -490,7 +492,7 @@ function DesktopComments({ comments }: { comments: CommentView[] }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-[1.9rem] font-bold tracking-[-0.05em] text-white">Community Verdict</h2>
+        <h2 className="font-display text-[1.9rem] font-bold tracking-[-0.035em] text-white [word-spacing:0.08em]">Community Verdict</h2>
         <button
           type="button"
           className="rounded-[0.85rem] border border-white/10 bg-surface-container-high px-4 py-2 font-display text-[0.56rem] font-bold uppercase tracking-[0.18em] text-white"
@@ -632,40 +634,37 @@ export function KolProfileScreen({
 
   return (
     <>
-      <MobileShell navKey="profile" avatar={brandAvatar} className="relative">
-        <div className="pointer-events-none absolute inset-x-0 top-24 h-36 rounded-full bg-primary/7 blur-[90px]" />
-        <div className="pointer-events-none absolute right-[-5rem] top-[26rem] h-56 w-40 rounded-full bg-secondary/8 blur-[110px]" />
+      <MobileShell navKey={null} avatar={brandAvatar} className="relative">
+        <div className="pointer-events-none absolute inset-x-0 top-24 h-32 rounded-full bg-primary/5 blur-[90px]" />
 
-        <section className="relative space-y-6">
-          <div className="space-y-4 pt-1 text-center">
-            <div className="relative mx-auto h-32 w-32">
-              <div className="absolute inset-0 rounded-[2rem] bg-primary/15 blur-2xl" />
-              <div className="absolute inset-0 rounded-[2rem] border border-primary/18" />
-              <div className="relative h-full w-full overflow-hidden rounded-[2rem] border-2 border-primary/28 shadow-[0_24px_48px_rgba(0,0,0,0.45)]">
+        <section className="relative space-y-5">
+          <div className="space-y-3 pt-1 text-center">
+            <div className="relative mx-auto h-28 w-28">
+              <div className="absolute inset-0 rounded-[1.55rem] bg-primary/12 blur-2xl" />
+              <div className="relative h-full w-full overflow-hidden rounded-[1.55rem] border border-primary/24 shadow-surface">
                 <ImageCard src={profile.kol.avatarUrl} alt={profile.kol.displayName} className="h-full w-full" sizes="128px" priority />
               </div>
             </div>
 
             <div className="flex items-center justify-center gap-2">
-              <span className="rounded-full border border-secondary/20 bg-secondary-container/20 px-3 py-1 font-display text-[0.5rem] font-bold uppercase tracking-[0.28em] text-secondary">
+              <span className="rounded-full border border-secondary/20 bg-secondary-container/20 px-3 py-1 font-label text-[0.52rem] font-semibold uppercase tracking-[0.16em] text-secondary">
                 {profile.kol.verifiedLabel}
               </span>
               <Icon name="verified" filled className="text-[0.95rem] text-secondary" />
             </div>
 
             <div>
-              <h1 className="font-display text-[2.4rem] font-black tracking-[-0.08em] text-white">{profile.kol.displayName}</h1>
-              <p className="mt-1 text-[1.02rem] text-on-surface-variant">{profile.kol.role}</p>
+              <h1 className="font-display text-[2.1rem] font-black tracking-[-0.08em] text-white">{profile.kol.displayName}</h1>
+              <p className="mt-1 text-sm text-on-surface-variant">{profile.kol.role}</p>
             </div>
 
-            <div className="mx-auto max-w-[12rem] overflow-hidden rounded-[2rem] border border-white/6 bg-surface-container-high px-7 py-4 shadow-[0_24px_48px_rgba(0,0,0,0.38)]">
-              <div className="mb-1 font-display text-[0.48rem] font-bold uppercase tracking-[0.26em] text-primary">Verdict Score</div>
+            <div className="mx-auto max-w-[11rem] overflow-hidden rounded-[1.25rem] border border-white/8 bg-surface-container-high px-5 py-3 shadow-surface">
+              <div className="mb-1 font-label text-[0.52rem] font-semibold uppercase tracking-[0.16em] text-primary">Verdict Score</div>
               <div className="relative flex items-end justify-center">
-                <div className="absolute inset-x-5 bottom-2 h-10 rounded-full bg-primary/14 blur-2xl" />
-                <span className="trust-glow font-display text-[3.6rem] font-black leading-none tracking-[-0.08em] text-primary">
+                <span className="font-display text-[3rem] font-black leading-none tracking-[-0.08em] text-primary">
                   {Math.round(profile.kol.score)}
                 </span>
-                <span className="pb-2 font-display text-[1.45rem] font-black text-primary/55">/100</span>
+                <span className="pb-1 font-label text-[1rem] font-semibold text-primary/55">/100</span>
               </div>
             </div>
           </div>
@@ -700,7 +699,7 @@ export function KolProfileScreen({
           <button
             type="button"
             onClick={openVerifyClaimModal}
-            className="flex w-full items-center justify-center gap-2 rounded-[1.15rem] border border-primary/20 bg-surface-container-highest px-4 py-4 text-center font-display text-[0.62rem] font-bold uppercase tracking-[0.2em] text-primary transition-all duration-300 hover:bg-primary hover:text-on-primary sm:text-[0.68rem] sm:tracking-[0.22em]"
+            className="kv-focus-ring flex w-full items-center justify-center gap-2 rounded-xl border border-primary/22 bg-primary/10 px-4 py-3.5 text-center font-label text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-primary transition-colors duration-200 hover:bg-primary hover:text-on-primary"
           >
             <Icon name="add_comment" className="text-[1.05rem]" />
             Submit Verdict / Verify Claim
@@ -729,18 +728,17 @@ export function KolProfileScreen({
       </MobileShell>
 
       <DesktopShell
-        navKey="profile"
+        navKey={null}
         avatar={brandAvatar}
-        searchPlaceholder="Search Obsidian Database..."
-        className="relative overflow-hidden"
+        searchPlaceholder="Search KOL registry..."
+        className="relative overflow-y-auto thin-scrollbar"
       >
-        <div className="pointer-events-none absolute right-[-12rem] top-[-8rem] h-[42rem] w-[42rem] rounded-full bg-primary/5 blur-[140px]" />
-        <div className="pointer-events-none absolute bottom-[-10rem] left-[18rem] h-[32rem] w-[32rem] rounded-full bg-secondary/5 blur-[120px]" />
+        <div className="pointer-events-none absolute right-[-10rem] top-[-8rem] h-[34rem] w-[34rem] rounded-full bg-primary/4 blur-[130px]" />
 
-        <section className="relative mx-auto max-w-[1440px] pb-10">
-          <div className="grid grid-cols-[18.75rem_minmax(0,1fr)_16.5rem] gap-8">
-            <div className="space-y-6">
-              <section className="rounded-[1rem] border border-white/5 bg-[linear-gradient(180deg,rgba(14,24,22,0.9),rgba(8,13,13,0.98))] p-5 shadow-[0_24px_48px_rgba(0,0,0,0.4)]">
+        <section className="kv-page-tight relative">
+          <div className="grid grid-cols-[16rem_minmax(0,1fr)_15rem] gap-5">
+            <div className="space-y-5">
+              <section className="rounded-[1.15rem] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,22,0.9),rgba(8,13,13,0.98))] p-4 shadow-surface">
                 <div className="relative overflow-hidden rounded-[0.95rem]">
                   <ImageCard
                     src={profile.kol.avatarUrl}
@@ -751,8 +749,8 @@ export function KolProfileScreen({
                     imageClassName="object-cover grayscale"
                   />
                   <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1.5 shadow-[0_14px_24px_rgba(156,255,147,0.2)]">
-                    <div className="flex items-center gap-1.5 font-display text-[0.56rem] font-black uppercase tracking-[0.12em] text-on-primary">
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1.5">
+                    <div className="flex items-center gap-1.5 font-label text-[0.56rem] font-semibold uppercase tracking-[0.12em] text-on-primary">
                       <Icon name="verified" filled className="text-[0.95rem]" />
                       {profile.kol.verifiedLabel}
                     </div>
@@ -760,7 +758,7 @@ export function KolProfileScreen({
                 </div>
 
                 <div className="mt-5">
-                  <h1 className="font-display text-[3rem] font-black leading-[0.92] tracking-[-0.08em] text-white">
+                  <h1 className="font-display text-[2.35rem] font-black leading-[0.92] tracking-[-0.08em] text-white">
                     {desktopNameLines[0]}
                     {desktopNameLines[1] ? (
                       <>
@@ -786,7 +784,7 @@ export function KolProfileScreen({
                   </div>
                 </div>
 
-                <div className="mt-7 grid grid-cols-2 gap-4">
+                <div className="mt-6 grid grid-cols-2 gap-3">
                   <div className="rounded-[0.6rem] bg-surface-container-lowest p-4">
                     <div className="font-display text-[0.48rem] font-bold uppercase tracking-[0.22em] text-on-surface-variant">
                       Accurate Calls
@@ -806,8 +804,8 @@ export function KolProfileScreen({
                 </div>
               </section>
 
-              <section className="rounded-[1rem] bg-surface-container-low px-5 py-5">
-                <div className="mb-5 font-display text-[0.56rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+              <section className="rounded-[1rem] border border-white/8 bg-surface-container-low px-4 py-4">
+                <div className="kv-label mb-4">
                   Core Networks
                 </div>
 
@@ -831,8 +829,8 @@ export function KolProfileScreen({
               </section>
             </div>
 
-            <div className="space-y-8">
-              <TabStrip tabs={desktopTabs} active={desktopTab} onChange={(tab) => setDesktopTab(tab as DesktopTab)} className="gap-8" />
+            <div className="space-y-6">
+              <TabStrip tabs={desktopTabs} active={desktopTab} onChange={(tab) => setDesktopTab(tab as DesktopTab)} className="gap-6" />
 
               <AnimatePresence mode="wait">
                 <motion.div
@@ -853,14 +851,14 @@ export function KolProfileScreen({
               </AnimatePresence>
             </div>
 
-            <div className="space-y-6">
-              <section className="glass-panel rounded-[0.95rem] border border-white/5 px-5 py-5">
-                <h3 className="font-display text-[1.6rem] font-bold tracking-[-0.05em] text-white">Interaction Hub</h3>
-                <div className="mt-5 space-y-4">
+            <div className="space-y-5">
+              <section className="kv-panel px-4 py-4">
+                <h3 className="font-display text-[1.35rem] font-bold tracking-[-0.035em] text-white [word-spacing:0.08em]">Interaction Hub</h3>
+                <div className="mt-4 space-y-3">
                   <button
                     type="button"
                     onClick={openVerifyClaimModal}
-                    className="flex w-full items-center justify-center gap-2 rounded-[0.75rem] border border-primary/20 bg-surface-container-highest px-4 py-4 font-display text-[0.72rem] font-bold uppercase tracking-[0.2em] text-primary transition-all hover:bg-primary hover:text-on-primary"
+                    className="kv-focus-ring flex w-full items-center justify-center gap-2 rounded-xl border border-primary/22 bg-primary/10 px-4 py-3 font-label text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-primary hover:text-on-primary"
                   >
                     <Icon name="add_comment" className="text-[1rem]" />
                     Submit Verdict
@@ -872,7 +870,7 @@ export function KolProfileScreen({
               </section>
 
               <section className="rounded-[0.95rem] bg-transparent px-2 py-2">
-                <div className="mb-5 font-display text-[0.56rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+                <div className="kv-label mb-4">
                   Top Endorsers
                 </div>
 
@@ -924,7 +922,7 @@ export function KolProfileScreen({
                 </Link>
               </section>
 
-              <section className="rounded-[0.95rem] border border-tertiary/20 bg-tertiary/5 px-5 py-5">
+              <section className="rounded-[0.95rem] border border-tertiary/20 bg-tertiary/5 px-4 py-4">
                 <div className="mb-3 flex items-center gap-2">
                   <Icon name="warning" className="text-[0.95rem] text-tertiary" />
                   <span className="font-display text-[0.56rem] font-bold uppercase tracking-[0.24em] text-tertiary">

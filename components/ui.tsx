@@ -73,7 +73,7 @@ export function PrimaryButton({ children, className, href, icon, iconFilled, onC
   const content = (
     <span
       className={cx(
-        "liquid-neon-primary primary-glow inline-flex items-center justify-center gap-2 rounded-[1.15rem] px-5 py-3 font-display text-[0.7rem] font-bold uppercase tracking-[0.24em] transition-transform duration-300 hover:-translate-y-0.5",
+        "kv-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary px-5 py-3 font-label text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-on-primary shadow-[0_12px_26px_rgba(0,0,0,0.28)] transition-[background-color,transform,opacity] duration-200 hover:-translate-y-0.5 hover:bg-primary/90",
         disabled ? "cursor-not-allowed opacity-70 hover:translate-y-0" : "",
         className,
       )}
@@ -98,7 +98,7 @@ export function CyanButton({ children, className, href, icon, iconFilled, onClic
   const content = (
     <span
       className={cx(
-        "liquid-neon-cyan cyan-glow inline-flex items-center justify-center gap-2 rounded-[1.2rem] px-5 py-3 font-display text-[0.72rem] font-bold uppercase tracking-[0.22em] transition-transform duration-300 hover:-translate-y-0.5",
+        "kv-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/14 px-5 py-3 font-label text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-secondary transition-[background-color,transform,opacity] duration-200 hover:-translate-y-0.5 hover:bg-secondary/20",
         disabled ? "cursor-not-allowed opacity-70 hover:translate-y-0" : "",
         className,
       )}
@@ -132,7 +132,7 @@ export function GhostButton({
   const content = (
     <span
       className={cx(
-        "ghost-outline glass-panel inline-flex items-center justify-center gap-2 rounded-[1.05rem] px-4 py-3 font-display text-[0.68rem] font-bold uppercase tracking-[0.22em] text-on-surface transition-colors duration-300 hover:bg-white/8",
+        "kv-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-surface-container px-4 py-3 font-label text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-on-surface transition-colors duration-200 hover:bg-surface-container-high",
         disabled ? "cursor-not-allowed opacity-70 hover:bg-transparent" : "",
         className,
       )}
@@ -170,7 +170,7 @@ export function Pill({ children, className, tone = "neutral" }: PillProps) {
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-2 rounded-full px-3 py-1 font-display text-[0.58rem] font-bold uppercase tracking-[0.24em]",
+        "inline-flex items-center gap-2 rounded-full px-3 py-1 font-label text-[0.58rem] font-semibold uppercase tracking-[0.16em]",
         toneClasses,
         className,
       )}
@@ -191,18 +191,18 @@ export function ScoreChip({ value, suffix, label, className }: ScoreChipProps) {
   return (
     <div
       className={cx(
-        "glass-panel border border-primary/25 rounded-[1.55rem] px-4 py-3 shadow-[0_0_24px_rgba(156,255,147,0.12)]",
+        "rounded-[1.2rem] border border-primary/20 bg-primary/8 px-4 py-3 shadow-[0_16px_34px_rgba(0,0,0,0.28)]",
         className,
       )}
     >
       {label ? (
-        <div className="mb-1 font-display text-[0.53rem] font-bold uppercase tracking-[0.26em] text-primary">
+          <div className="mb-1 font-label text-[0.55rem] font-semibold uppercase tracking-[0.16em] text-primary">
           {label}
         </div>
       ) : null}
       <div className="flex items-end gap-1">
-        <span className="font-display text-[2rem] font-black leading-none text-primary">{value}</span>
-        {suffix ? <span className="pb-1 font-display text-xs font-bold text-on-surface-variant">{suffix}</span> : null}
+        <span className="font-display text-[2rem] font-bold leading-none tracking-[-0.06em] text-primary">{value}</span>
+        {suffix ? <span className="pb-1 font-label text-xs font-semibold text-on-surface-variant">{suffix}</span> : null}
       </div>
     </div>
   );
@@ -215,7 +215,7 @@ type TrustMeterProps = {
 
 export function TrustMeter({ value, className }: TrustMeterProps) {
   return (
-    <div className={cx("h-2 w-full overflow-hidden rounded-full bg-surface-container-highest", className)}>
+    <div className={cx("h-1.5 w-full overflow-hidden rounded-full bg-surface-container-highest", className)}>
       <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${value}%` }}
@@ -246,7 +246,7 @@ export function TabStrip({
   return (
     <div
       className={cx(
-        compact ? "inline-flex rounded-[1rem] bg-surface-container-low p-1" : "flex items-end gap-7 border-b border-white/6",
+        compact ? "inline-flex rounded-xl border border-white/8 bg-surface-container-low p-1" : "flex items-end gap-6 border-b border-white/8",
         className,
       )}
     >
@@ -259,18 +259,18 @@ export function TabStrip({
             type="button"
             onClick={() => onChange?.(tab)}
             className={cx(
-              "relative font-display font-bold uppercase transition-colors",
+              "kv-focus-ring relative font-label font-semibold uppercase transition-colors",
               compact
                 ? cx(
-                    "rounded-[0.85rem] px-5 py-2 text-[0.65rem] tracking-[0.18em]",
+                    "rounded-[0.7rem] px-4 py-2 text-[0.62rem] tracking-[0.14em]",
                     isActive
                       ? tone === "primary"
-                        ? "bg-primary text-on-primary shadow-[0_0_18px_rgba(156,255,147,0.2)]"
-                        : "bg-secondary text-on-secondary shadow-[0_0_18px_rgba(0,207,252,0.2)]"
+                        ? "bg-primary text-on-primary"
+                        : "bg-secondary/20 text-secondary"
                       : "text-on-surface-variant hover:text-on-surface",
                   )
                 : cx(
-                    "pb-4 text-sm tracking-[0.2em]",
+                    "pb-3 text-[0.72rem] tracking-[0.16em]",
                     isActive ? (tone === "primary" ? "text-primary" : "text-secondary") : "text-on-surface-variant hover:text-on-surface",
                   ),
             )}
@@ -301,7 +301,7 @@ export function SurfaceCard({ children, className }: SurfaceCardProps) {
   return (
     <div
       className={cx(
-        "relative rounded-[2rem] bg-surface-container-low/90 shadow-[0_24px_48px_rgba(0,0,0,0.42)]",
+        "kv-panel relative",
         className,
       )}
     >
@@ -329,16 +329,131 @@ export function MetricCard({ label, value, icon, tone = "neutral", className }: 
           : "text-on-surface border-white/6 bg-surface-container-high";
 
   return (
-    <div className={cx("rounded-[1.65rem] border p-5", toneClasses, className)}>
+    <div className={cx("rounded-2xl border p-5", toneClasses, className)}>
       {icon ? (
         <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-black/20">
           <Icon name={icon} className="text-[1.35rem]" filled={tone !== "neutral"} />
         </div>
       ) : null}
-      <div className="font-display text-[0.58rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+        <div className="font-label text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
         {label}
       </div>
-      <div className="mt-2 font-display text-[2rem] font-black tracking-tight">{value}</div>
+      <div className="mt-2 font-display text-[2rem] font-bold tracking-[-0.06em] tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+type PanelProps = {
+  children: React.ReactNode;
+  className?: string;
+  as?: "div" | "section" | "article";
+};
+
+export function Panel({ children, className, as: Component = "div" }: PanelProps) {
+  return <Component className={cx("kv-panel", className)}>{children}</Component>;
+}
+
+export function CompactCard({ children, className, as: Component = "div" }: PanelProps) {
+  return <Component className={cx("kv-card", className)}>{children}</Component>;
+}
+
+export function SectionHeader({
+  eyebrow,
+  title,
+  copy,
+  className,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  copy?: string;
+  className?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className={cx("flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", className)}>
+      <div>
+        {eyebrow ? <div className="kv-label mb-2 text-secondary">{eyebrow}</div> : null}
+        <h1 className="font-display text-[2rem] font-bold leading-none tracking-[-0.065em] text-white sm:text-[2.8rem]">
+          {title}
+        </h1>
+        {copy ? <p className="mt-3 max-w-[42rem] text-base leading-7 text-on-surface-variant">{copy}</p> : null}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+export function StatTile({
+  label,
+  value,
+  meta,
+  tone = "neutral",
+  className,
+}: {
+  label: string;
+  value: React.ReactNode;
+  meta?: string;
+  tone?: "primary" | "secondary" | "tertiary" | "neutral";
+  className?: string;
+}) {
+  return (
+    <CompactCard className={cx("p-4", className)}>
+      <div className={cx("mb-3 h-1 w-8 rounded-full", tone === "primary" ? "bg-primary" : tone === "secondary" ? "bg-secondary" : tone === "tertiary" ? "bg-tertiary" : "bg-white/20")} />
+      <div className="kv-label">{label}</div>
+      <div className="mt-2 flex items-end gap-2">
+        <div className="kv-stat-number text-[2rem] leading-none">{value}</div>
+        {meta ? <div className="pb-1 font-label text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">{meta}</div> : null}
+      </div>
+    </CompactCard>
+  );
+}
+
+export function TextField({
+  id,
+  label,
+  value,
+  placeholder,
+  onChange,
+  prefix,
+  disabled,
+  type = "text",
+  className,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+  prefix?: string;
+  disabled?: boolean;
+  type?: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label htmlFor={id} className="kv-label mb-2 block">
+        {label}
+      </label>
+      <div className="relative rounded-xl border border-white/8 bg-surface-container-lowest transition-colors focus-within:border-secondary/45">
+        {prefix ? (
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-on-surface-variant">
+            {prefix}
+          </span>
+        ) : null}
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          className={cx(
+            "kv-focus-ring h-12 w-full bg-transparent px-4 text-base text-on-surface placeholder:text-on-surface-variant/55 disabled:cursor-not-allowed disabled:opacity-60",
+            prefix ? "pl-10" : "",
+          )}
+        />
+      </div>
     </div>
   );
 }

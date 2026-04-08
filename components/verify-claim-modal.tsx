@@ -73,11 +73,11 @@ type PreparedEvidence =
 
 function tagTone(tag: (typeof classificationTags)[number], selected: boolean) {
   if (selected) {
-    return "border-primary/20 bg-primary/5 text-primary";
+    return "border-primary/25 bg-primary/10 text-primary";
   }
 
   if (tag === "Rug" || tag === "Scam") {
-    return "border-outline-variant/10 bg-surface-container-low text-on-surface-variant hover:border-tertiary/40 hover:bg-tertiary/10 hover:text-tertiary";
+    return "border-outline-variant/10 bg-surface-container-low text-on-surface-variant hover:border-tertiary/35 hover:bg-tertiary/10 hover:text-tertiary";
   }
 
   return "border-outline-variant/10 bg-surface-container-low text-on-surface-variant hover:border-white/15 hover:bg-surface-bright";
@@ -377,7 +377,7 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/62 px-4 py-5 backdrop-blur-md sm:py-6"
       onClick={handleClose}
     >
       <motion.div
@@ -386,23 +386,23 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
         exit={{ opacity: 0, y: 12, scale: 0.97 }}
         transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-[21.25rem] overflow-hidden rounded-[2rem] border border-white/8 bg-[rgba(38,38,38,0.84)] shadow-[0_24px_48px_rgba(0,0,0,0.6)] backdrop-blur-[20px] sm:max-w-[31.5rem]"
+        className="w-full max-w-[21.25rem] overflow-hidden rounded-[1.35rem] border border-white/8 bg-surface-container-high/95 shadow-surface-lg backdrop-blur-[20px] sm:max-w-[31rem]"
       >
-        <div className="flex items-center justify-between px-7 pb-4 pt-7 sm:px-8 sm:pt-8">
-          <h2 className="font-display text-[2rem] font-extrabold tracking-[-0.06em] text-white">SUBMIT VERDICT</h2>
+        <div className="flex items-center justify-between border-b border-white/8 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+          <h2 className="font-display text-[1.55rem] font-extrabold tracking-[-0.035em] text-white [word-spacing:0.08em] sm:text-[1.8rem]">SUBMIT VERDICT</h2>
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-full p-1 text-on-surface-variant transition-colors hover:text-white"
+            className="kv-focus-ring rounded-full p-1 text-on-surface-variant transition-colors hover:text-white"
             aria-label="Close verdict modal"
           >
-            <Icon name="close" className="text-[1.35rem]" />
+            <Icon name="close" className="text-[1.25rem]" />
           </button>
         </div>
 
-        <div className="space-y-6 px-7 pb-7 sm:px-8 sm:pb-8">
+        <div className="max-h-[min(78dvh,42rem)] space-y-5 overflow-y-auto px-5 pb-5 pt-5 thin-scrollbar sm:max-h-[min(84dvh,43rem)] sm:px-6 sm:pb-6">
           <div className="space-y-2">
-            <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+            <label className="kv-label px-1">
               Verdict Details
             </label>
             <textarea
@@ -410,12 +410,12 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
               onChange={(event) => setDescription(event.target.value)}
               disabled={submission.kind === "loading" || Boolean(draftComment)}
               placeholder="Detail your verdict, timing, and what the attached proof confirms."
-              className="h-28 w-full resize-none rounded-xl border border-transparent bg-surface-container-lowest p-4 text-base leading-7 text-on-surface placeholder:text-outline/50 transition-colors duration-300 focus:border-primary-dim focus:outline-none disabled:cursor-default disabled:opacity-75"
+              className="kv-focus-ring h-24 w-full resize-none rounded-xl border border-white/8 bg-surface-container-lowest p-4 text-sm leading-6 text-on-surface placeholder:text-outline/50 transition-colors duration-200 focus:border-primary-dim disabled:cursor-default disabled:opacity-75"
             />
           </div>
 
           <div className="space-y-3">
-            <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+            <label className="kv-label px-1">
               Classification Tags
             </label>
             <div className="grid grid-cols-3 gap-2.5">
@@ -429,7 +429,7 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
                     onClick={() => setSelectedTag(tag)}
                     disabled={submission.kind === "loading" || Boolean(draftComment)}
                     className={cx(
-                      "rounded-lg border px-3 py-2.5 font-display text-[0.68rem] font-bold uppercase tracking-[0.04em] transition-all duration-300",
+                      "kv-focus-ring rounded-lg border px-3 py-2.5 font-label text-[0.62rem] font-semibold uppercase tracking-[0.1em] transition-colors duration-200",
                       submission.kind === "loading" || Boolean(draftComment) ? "cursor-default opacity-70" : "",
                       tagTone(tag, selected),
                     )}
@@ -442,7 +442,7 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
           </div>
 
           <div className="space-y-3">
-            <label className="px-1 font-display text-[0.66rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
+            <label className="kv-label px-1">
               Evidence Type
             </label>
             <div className="grid grid-cols-2 gap-2.5">
@@ -456,7 +456,7 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
                     onClick={() => handleEvidenceModeChange(mode.value)}
                     disabled={submission.kind === "loading"}
                     className={cx(
-                      "flex items-center gap-2 rounded-xl border px-3 py-3 font-display text-[0.7rem] font-bold uppercase tracking-[0.08em] transition-all duration-300",
+                      "kv-focus-ring flex items-center gap-2 rounded-xl border px-3 py-3 font-label text-[0.64rem] font-semibold uppercase tracking-[0.12em] transition-colors duration-200",
                       selected
                         ? "border-secondary/30 bg-secondary/10 text-secondary"
                         : "border-outline-variant/12 bg-surface-container-low text-on-surface-variant hover:border-white/10 hover:bg-surface-bright",
@@ -485,14 +485,14 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={submission.kind === "loading"}
-                className="group flex w-full items-center justify-center gap-3 rounded-xl border border-outline-variant/15 bg-surface-container-high px-4 py-4 transition-all duration-300 hover:bg-surface-bright"
+                className="kv-focus-ring group flex w-full items-center justify-center gap-3 rounded-xl border border-outline-variant/15 bg-surface-container-low px-4 py-3.5 transition-colors duration-200 hover:bg-surface-bright"
                 title={selectedFile?.name}
               >
                 <Icon
                   name="attachment"
                   className="text-[1.25rem] text-secondary transition-transform duration-300 group-hover:scale-110"
                 />
-                <span className="max-w-[14rem] truncate font-display text-[0.95rem] font-semibold tracking-[-0.02em] text-on-surface">
+                <span className="max-w-[14rem] truncate text-sm font-semibold text-on-surface">
                   {selectedFile?.name ?? evidenceModeMeta.placeholder}
                 </span>
               </button>
@@ -503,19 +503,19 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
                 onChange={(event) => setEvidenceValue(event.target.value)}
                 disabled={submission.kind === "loading"}
                 placeholder={evidenceModeMeta.placeholder}
-                className="w-full rounded-xl border border-transparent bg-surface-container-lowest px-4 py-4 text-sm text-on-surface placeholder:text-outline/50 transition-colors duration-300 focus:border-secondary/40 focus:outline-none disabled:cursor-default disabled:opacity-75"
+                className="kv-focus-ring w-full rounded-xl border border-white/8 bg-surface-container-lowest px-4 py-3.5 text-sm text-on-surface placeholder:text-outline/50 transition-colors duration-200 focus:border-secondary/40 disabled:cursor-default disabled:opacity-75"
               />
             )}
 
-            <p className="px-1 font-display text-[0.52rem] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
+            <p className="px-1 font-label text-[0.52rem] font-semibold uppercase tracking-[0.14em] text-on-surface-variant/70">
               {evidenceModeMeta.helper}
             </p>
           </div>
 
           <div className="border-t border-outline-variant/10 pt-4">
-            <div className="mb-6 flex items-center justify-between px-1">
-              <span className="font-display text-[0.95rem] font-medium text-on-surface-variant">Proof Fee:</span>
-              <span className="font-display text-[1.55rem] font-bold tracking-[-0.05em] text-secondary">{feeAmount} ETH</span>
+            <div className="mb-4 flex items-center justify-between px-1">
+              <span className="text-sm font-medium text-on-surface-variant">Proof Fee:</span>
+              <span className="font-display text-[1.25rem] font-bold tracking-[-0.05em] text-secondary">{feeAmount} ETH</span>
             </div>
 
             <button
@@ -523,10 +523,10 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
               onClick={() => void handleSubmit()}
               disabled={submission.kind === "loading"}
               className={cx(
-                "flex w-full items-center justify-center gap-2 rounded-[1rem] bg-secondary px-5 py-5 font-display text-[1.25rem] font-extrabold tracking-[-0.04em] text-on-secondary shadow-[0_0_20px_rgba(0,207,252,0.3)] transition-all duration-300 active:scale-[0.985]",
+                "kv-focus-ring flex w-full items-center justify-center gap-2 rounded-xl border border-secondary/30 bg-secondary/18 px-5 py-4 font-label text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-secondary transition-[background-color,transform,opacity] duration-200 active:scale-[0.985]",
                 submission.kind === "loading"
                   ? "cursor-wait opacity-85"
-                  : "hover:shadow-[0_0_30px_rgba(0,207,252,0.5)]",
+                  : "hover:bg-secondary hover:text-on-secondary",
               )}
             >
               {submission.kind === "loading"
@@ -555,7 +555,7 @@ function VerifyClaimDialog({ onClose, kolSlug, feeAmount, onCommentCreated }: Ve
             ) : null}
           </div>
 
-          <p className="text-center font-display text-[0.56rem] font-bold uppercase tracking-[0.24em] text-outline opacity-60">
+          <p className="text-center font-label text-[0.54rem] font-semibold uppercase tracking-[0.16em] text-outline opacity-60">
             All entries are permanent on-chain.
           </p>
         </div>

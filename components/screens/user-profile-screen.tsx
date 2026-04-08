@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
-import { MobileShell } from "@/components/app-shell";
+import { DesktopShell, MobileShell } from "@/components/app-shell";
 import { WalletConnectPrompt } from "@/components/wallet-gate";
 import { useWalletSession } from "@/components/wallet-session-provider";
 import { Icon, ImageCard } from "@/components/ui";
-import { brandAvatar, navItems } from "@/lib/mock-data";
+import { brandAvatar } from "@/lib/mock-data";
 import type { ActivityView, Tone, UserProfileView } from "@/lib/types/domain";
 import { cx } from "@/lib/utils";
 
@@ -89,78 +88,6 @@ function DesktopArtifactRow({ item }: { item: UserProfileView["recentArtifacts"]
         <p className="truncate text-xs text-on-surface-variant">{item.body}</p>
       </div>
     </div>
-  );
-}
-
-function DesktopSidebarNav() {
-  return (
-    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-white/5 bg-[#0e0e0e] px-6 pt-28 md:flex md:flex-col">
-      <div className="font-display text-xl font-black text-white">KOL Verdict</div>
-      <div className="mb-8 mt-2 font-display text-[0.56rem] font-bold uppercase tracking-[0.28em] text-on-surface-variant">
-        The Obsidian Oracle
-      </div>
-
-      <div className="flex flex-col gap-2">
-        {navItems.map((item) => {
-          const active = item.key === "profile";
-
-          return (
-            <Link
-              key={item.key}
-              href={item.href}
-              className={cx(
-                "group flex items-center gap-3 rounded-xl px-4 py-3 transition-colors duration-300",
-                item.key === "profile" ? "bg-white/10 text-white" : "text-zinc-500 hover:bg-white/5 hover:text-white",
-              )}
-            >
-              <Icon
-                name={item.desktopIcon ?? item.icon}
-                className={cx("text-[1.15rem] transition-transform group-hover:scale-105", active ? "text-secondary" : "text-current")}
-                filled={active}
-              />
-              <span className="font-display text-[0.72rem] font-bold uppercase tracking-[0.22em]">
-                {item.key === "profile" ? "My Profile" : item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="mt-auto pb-6">
-        <button
-          type="button"
-          className="w-full rounded-xl border border-primary/20 bg-surface-container-highest py-4 font-display text-[0.72rem] font-bold uppercase tracking-[0.2em] text-primary transition-all duration-300 hover:bg-primary/10"
-        >
-          Mint Reputation
-        </button>
-      </div>
-    </aside>
-  );
-}
-
-function DesktopTopNav({ avatar }: { avatar: string }) {
-  return (
-    <nav className="fixed left-64 right-0 top-0 z-50 hidden h-20 items-center justify-end bg-[#0e0e0e]/70 px-8 shadow-[0_24px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl md:flex">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-4 text-on-surface-variant">
-          <button type="button" className="transition-colors hover:text-white">
-            <Icon name="notifications" className="text-[1.25rem]" />
-          </button>
-          <button type="button" className="transition-colors hover:text-white">
-            <Icon name="settings" className="text-[1.25rem]" />
-          </button>
-        </div>
-        <ImageCard
-          src={avatar}
-          alt="KOL Verdict account avatar"
-          className="h-10 w-10 rounded-2xl border border-primary/20 bg-surface-container-high"
-          sizes="40px"
-          priority
-        />
-      </div>
-
-      <div className="absolute bottom-0 left-0 h-px w-full bg-[#1a1a1a]" />
-    </nav>
   );
 }
 
@@ -293,42 +220,43 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
         </motion.section>
       </MobileShell>
 
-      <div className="hidden bg-surface text-on-surface md:block">
-        <DesktopTopNav avatar={avatar} />
-        <DesktopSidebarNav />
-
-        <main className="min-h-screen pt-20 md:pl-64">
-          <div className="mx-auto max-w-7xl space-y-12 p-8 md:p-12">
+      <DesktopShell
+        navKey="profile"
+        avatar={avatar}
+        topbarIcons={["notifications", "settings"]}
+        className="overflow-y-auto thin-scrollbar"
+      >
+        <div className="kv-page space-y-7">
             {userProfile ? (
               <>
                 <motion.header
                   initial={{ opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.34, ease: [0.2, 0, 0, 1] }}
-                  className="relative flex flex-col gap-8 md:flex-row md:items-end"
+                  className="relative flex flex-col gap-6 md:flex-row md:items-end"
                 >
                   <div className="relative">
-                    <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-surface-container-high shadow-2xl md:h-40 md:w-40">
+                    <div className="h-28 w-28 overflow-hidden rounded-[1.4rem] border border-white/10 bg-surface-container-high shadow-surface md:h-32 md:w-32">
                       <ImageCard
                         src={userProfile.portraitImage}
                         alt={`${userProfile.displayName} portrait`}
                         className="h-full w-full"
-                        sizes="160px"
+                        sizes="128px"
                         priority
                         imageClassName="object-cover grayscale transition-all duration-500 hover:grayscale-0"
                       />
                     </div>
-                    <div className="absolute -bottom-2 -right-2 rounded-full border-4 border-surface bg-primary p-2 text-on-primary">
+                    <div className="absolute -bottom-2 -right-2 rounded-xl border border-surface bg-primary p-2 text-on-primary">
                       <Icon name="verified" filled className="text-[1.15rem]" />
                     </div>
                   </div>
 
                   <div className="flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-4">
-                      <h1 className="font-display text-[4rem] font-black tracking-[-0.08em] text-white md:text-[5rem]">
+                      <h1 className="font-display text-[3.25rem] font-black tracking-[-0.08em] text-white md:text-[4rem]">
                         {userProfile.displayName}
                       </h1>
-                      <span className="rounded-full border border-secondary/20 bg-secondary-container/30 px-3 py-1 font-display text-[0.56rem] font-bold uppercase tracking-[0.24em] text-secondary">
+                      <span className="rounded-full border border-secondary/20 bg-secondary-container/30 px-3 py-1 font-label text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-secondary">
                         {userProfile.heroHandle}
                       </span>
                     </div>
@@ -355,21 +283,21 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                   initial={{ opacity: 0, y: 22 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.38, delay: 0.06, ease: [0.2, 0, 0, 1] }}
-                  className="grid grid-cols-1 gap-6 md:grid-cols-3"
+                      className="grid grid-cols-1 gap-5 md:grid-cols-3"
                 >
-                  <div className="relative overflow-hidden rounded-xl border border-white/5 bg-surface-container-low p-8 shadow-[0_24px_48px_rgba(0,0,0,0.4)] md:col-span-2">
-                    <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-primary/5 blur-[100px]" />
+                  <div className="kv-panel relative overflow-hidden p-6 md:col-span-2">
+                    <div className="pointer-events-none absolute -right-32 -top-32 h-64 w-64 rounded-full bg-primary/4 blur-[100px]" />
                     <div className="relative z-10 flex h-full flex-col justify-between">
                       <div>
                         <div className="mb-6 flex items-start justify-between">
-                          <span className="font-display text-[0.5rem] font-bold uppercase tracking-[0.3em] text-on-surface-variant">
+                          <span className="kv-label">
                             Verdict Score
                           </span>
-                          <span className="font-display text-[0.5rem] font-bold uppercase tracking-[0.22em] text-primary">
+                          <span className="font-label text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-primary">
                             {userProfile.reputationDelta}
                           </span>
                         </div>
-                        <div className="font-display text-[7rem] font-black tracking-[-0.1em] text-transparent bg-[linear-gradient(135deg,#9cff93_0%,#00ec3b_100%)] bg-clip-text drop-shadow-[0_0_30px_rgba(156,255,147,0.3)] md:text-[8.5rem]">
+                        <div className="font-display bg-[linear-gradient(135deg,var(--primary)_0%,var(--secondary)_100%)] bg-clip-text text-[5rem] font-black tracking-[-0.1em] text-transparent md:text-[6.5rem]">
                           {formatInteger(userProfile.reputationPoints)}
                         </div>
                       </div>
@@ -385,12 +313,12 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                     </div>
                   </div>
 
-                  <div className="flex flex-col justify-between rounded-xl border border-white/5 bg-surface-container-low p-8 shadow-[0_24px_48px_rgba(0,0,0,0.4)]">
+                  <div className="kv-panel flex flex-col justify-between p-6">
                     <div>
-                      <span className="mb-4 block font-display text-[0.5rem] font-bold uppercase tracking-[0.3em] text-on-surface-variant">
+                      <span className="kv-label mb-4 block">
                         Influence Weight
                       </span>
-                      <div className="font-display text-[4rem] font-black tracking-[-0.08em] text-secondary">
+                      <div className="font-display text-[3.2rem] font-black tracking-[-0.08em] text-secondary">
                         {userProfile.influenceWeightLabel.replace("NW", "")}
                         <span className="text-[1.55rem]">NW</span>
                       </div>
@@ -417,11 +345,11 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                   initial={{ opacity: 0, y: 22 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.38, delay: 0.12, ease: [0.2, 0, 0, 1] }}
-                  className="grid grid-cols-1 gap-12 lg:grid-cols-3"
+                  className="grid grid-cols-1 gap-6 lg:grid-cols-3"
                 >
-                  <section className="space-y-8 lg:col-span-2">
+                  <section className="space-y-5 lg:col-span-2">
                     <div className="flex items-center justify-between">
-                      <h2 className="font-display text-[1.45rem] font-bold uppercase tracking-[0.16em] text-white">
+                      <h2 className="font-display text-[1.35rem] font-bold tracking-[-0.04em] text-white">
                         Recent Artifacts
                       </h2>
                       <button
@@ -443,10 +371,10 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                     </div>
                   </section>
 
-                  <aside className="space-y-8">
-                    <h2 className="font-display text-[1.45rem] font-bold uppercase tracking-[0.16em] text-white">Trust Clusters</h2>
+                  <aside className="space-y-5">
+                    <h2 className="font-display text-[1.35rem] font-bold tracking-[-0.04em] text-white">Trust Clusters</h2>
 
-                    <div className="rounded-xl border border-white/5 bg-surface-container-low p-6">
+                    <div className="kv-card p-5">
                       <div className="relative mb-6 aspect-square w-full overflow-hidden rounded-lg border border-white/5 bg-surface-container-lowest">
                         <div className="absolute inset-0 opacity-20">
                           <ImageCard
@@ -547,34 +475,14 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                     </div>
                   }
                   footer={<EmptyMessage message="Connect your wallet to load your account-specific profile." className="py-6 text-left" />}
-                  cardClassName="max-w-2xl items-start rounded-xl border border-white/5 bg-surface-container-low p-10 text-left shadow-[0_24px_48px_rgba(0,0,0,0.4)]"
+                  cardClassName="max-w-xl items-start rounded-[1.35rem] border border-white/8 bg-surface-container-low p-8 text-left shadow-surface"
                   buttonClassName="mt-3 rounded-xl border border-secondary/20 bg-secondary/10 px-6 py-3 font-display text-[0.72rem] font-bold uppercase tracking-[0.2em] text-secondary transition-colors duration-300 hover:bg-secondary/16"
                   onConnect={connect}
                 />
               </motion.section>
             )}
-          </div>
-        </main>
-
-        <footer className="border-t border-white/5 bg-surface-container-lowest px-8 py-12 md:pl-64">
-          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 opacity-40 transition-opacity hover:opacity-100 md:flex-row">
-            <div className="flex items-center gap-2">
-              <span className="font-display text-xl font-black tracking-[-0.06em]">KOL VERDICT</span>
-              <span className="font-display text-[0.54rem] font-bold uppercase tracking-[0.22em]">
-                / Secure Terminal
-              </span>
-            </div>
-            <div className="flex gap-8 font-display text-[0.58rem] font-bold uppercase tracking-[0.2em]">
-              <span>Documentation</span>
-              <span>Security Audit</span>
-              <span>Terminals</span>
-            </div>
-            <div className="font-mono text-[0.62rem] text-on-surface-variant">
-              BLOCK HEIGHT: 19,482,104 - LATENCY: 24MS
-            </div>
-          </div>
-        </footer>
-      </div>
+        </div>
+      </DesktopShell>
     </>
   );
 }

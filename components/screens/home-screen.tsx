@@ -174,37 +174,34 @@ function QueueImagePreload({ card }: { card: HomeCardView | null }) {
 function VerdictProgress({
   reviewed,
   total,
-  layout,
 }: {
   reviewed: number;
   total: number;
-  layout: VerdictCardLayout;
 }) {
   const safeTotal = Math.max(total, 1);
   const progress = Math.max(0, Math.min(100, Math.round((reviewed / safeTotal) * 100)));
-  const isDesktop = layout === "desktop";
 
   return (
     <div
       className={cx(
-        "rounded-[1.5rem] border border-white/6 bg-black/18 px-4 py-3 shadow-[0_18px_36px_rgba(0,0,0,0.24)] backdrop-blur-md",
-        isDesktop ? "mx-auto w-full max-w-[48rem]" : "w-full",
+        "rounded-2xl border border-white/8 bg-surface-container-low/80 px-4 py-3 shadow-[0_14px_32px_rgba(0,0,0,0.24)] backdrop-blur-md",
+        "w-full",
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-[0.52rem] font-black uppercase tracking-[0.24em] text-on-surface-variant/70">
+        <span className="font-label text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-on-surface-variant/75">
           Verdict Queue
         </span>
-        <span className="font-display text-[0.58rem] font-bold uppercase tracking-[0.22em] text-secondary">
+        <span className="font-label text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-secondary">
           {reviewed} / {total} reviewed
         </span>
       </div>
-      <div className="mt-3 h-[3px] overflow-hidden rounded-full bg-white/8">
+      <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/8">
         <motion.div
           initial={false}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
-          className="h-full rounded-full bg-[linear-gradient(90deg,rgba(0,207,252,0.75),rgba(156,255,147,0.95))]"
+          className="h-full rounded-full bg-gradient-to-r from-secondary/80 to-primary"
         />
       </div>
     </div>
@@ -235,8 +232,8 @@ function VerdictActionButton({
   const shouldIdleBounce = !disabled && !active && !successBurst && !isPressed;
   const sizeClasses =
     layout === "desktop"
-      ? "h-[4.9rem] rounded-[1.55rem] text-[0.78rem] tracking-[0.22em]"
-      : "h-[4.35rem] rounded-[1.35rem] text-[0.72rem] tracking-[0.2em]";
+      ? "h-16 rounded-2xl text-[0.76rem] tracking-[0.16em]"
+      : "h-12 rounded-xl text-[0.64rem] tracking-[0.14em]";
 
   return (
     <motion.button
@@ -250,8 +247,8 @@ function VerdictActionButton({
       animate={
         shouldIdleBounce
           ? {
-              y: [0, -1.5, 0],
-              scale: [1, 1.008, 1],
+              y: [0, -0.75, 0],
+              scale: [1, 1.003, 1],
             }
           : {
               y: 0,
@@ -261,7 +258,7 @@ function VerdictActionButton({
       transition={
         shouldIdleBounce
           ? {
-              duration: isPrimary ? 2.85 : 2.5,
+              duration: isPrimary ? 3.2 : 3,
               ease: [0.4, 0, 0.2, 1],
               repeat: Number.POSITIVE_INFINITY,
               repeatDelay: isPrimary ? 0.9 : 1.1,
@@ -275,12 +272,12 @@ function VerdictActionButton({
             }
       }
       className={cx(
-        "relative flex w-full items-center justify-center gap-2 overflow-hidden border font-display font-black uppercase text-center transition-[transform,box-shadow,opacity,border-color] duration-300 focus-visible:outline-none disabled:cursor-wait disabled:opacity-70",
+        "kv-focus-ring relative flex w-full items-center justify-center gap-2 overflow-hidden border font-label font-semibold uppercase text-center transition-[transform,box-shadow,opacity,border-color,background-color] duration-200 disabled:cursor-wait disabled:opacity-70",
         sizeClasses,
         isPrimary
-          ? "liquid-neon-primary primary-glow border-primary/25 text-on-primary hover:shadow-[0_0_46px_rgba(156,255,147,0.32)] focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:shadow-[0_0_46px_rgba(156,255,147,0.32)]"
-          : "border-tertiary/26 bg-[linear-gradient(180deg,rgba(255,77,109,0.18),rgba(255,77,109,0.08))] text-tertiary shadow-[0_18px_36px_rgba(255,77,109,0.12)] hover:shadow-[0_0_44px_rgba(255,77,109,0.24)] focus-visible:ring-2 focus-visible:ring-tertiary/35 focus-visible:shadow-[0_0_44px_rgba(255,77,109,0.24)]",
-        active && (isPrimary ? "shadow-[0_0_36px_rgba(156,255,147,0.3)]" : "shadow-[0_0_36px_rgba(255,77,109,0.22)]"),
+          ? "border-primary/30 bg-primary text-on-primary shadow-[0_16px_34px_rgba(0,0,0,0.32)] hover:bg-primary/90"
+          : "border-tertiary/35 bg-tertiary/10 text-tertiary shadow-[0_16px_34px_rgba(0,0,0,0.22)] hover:bg-tertiary/14",
+        active && (isPrimary ? "shadow-[0_0_26px_rgba(146,245,143,0.22)]" : "shadow-[0_0_24px_rgba(255,116,108,0.18)]"),
       )}
     >
       <AnimatePresence>
@@ -301,11 +298,11 @@ function VerdictActionButton({
           />
         ) : null}
       </AnimatePresence>
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_60%)]" />
+      <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),transparent_56%)] opacity-80" />
       <Icon
         name={icon}
         filled={isPrimary}
-        className={cx(layout === "desktop" ? "text-[1.55rem]" : "text-[1.35rem]")}
+        className={cx("relative z-10", layout === "desktop" ? "text-[1.35rem]" : "text-[1.2rem]")}
       />
       <span className="relative z-10">{label}</span>
     </motion.button>
@@ -315,9 +312,11 @@ function VerdictActionButton({
 function VerdictGestureHint({
   layout,
   subdued = false,
+  className,
 }: {
   layout: VerdictCardLayout;
   subdued?: boolean;
+  className?: string;
 }) {
   const isDesktop = layout === "desktop";
 
@@ -329,6 +328,7 @@ function VerdictGestureHint({
       className={cx(
         "flex items-center justify-center gap-2.5 text-center",
         isDesktop ? "px-4" : "px-2",
+        className,
       )}
     >
       <motion.span
@@ -342,8 +342,8 @@ function VerdictGestureHint({
 
       <span
         className={cx(
-          "font-display font-bold uppercase tracking-[0.18em] text-on-surface-variant/78",
-          isDesktop ? "text-[0.56rem]" : "text-[0.5rem] leading-5",
+          "font-label font-semibold uppercase tracking-[0.14em] text-on-surface-variant/70",
+          isDesktop ? "text-[0.58rem]" : "text-[0.54rem] leading-5",
         )}
       >
         Swipe right to endorse • Swipe left to reject
@@ -396,11 +396,11 @@ function VerdictCard({
   const rotateY = useSpring(tiltY, { stiffness: 220, damping: 26, mass: 0.5 });
   const initials = getInitials(card.name);
   const canTilt = isDesktop && enableInteractiveMotion && supportsFinePointer && !prefersReducedMotion;
-  const imageSize = isDesktop ? "h-52 w-52 rounded-[2.15rem]" : "h-40 w-40 rounded-[1.75rem]";
+  const imageSize = isDesktop ? "h-44 w-44 rounded-3xl" : "h-20 w-20 rounded-xl";
   const containerClasses = isDesktop
-    ? "mx-auto w-full max-w-[48rem] rounded-[2.55rem] border border-white/6 px-10 pb-7 pt-6"
-    : "w-full rounded-[2.25rem] border border-white/7 px-5 pb-5 pt-5";
-  const cardHeight = isDesktop ? "min-h-[38rem]" : "min-h-[calc(100vh-16rem)]";
+    ? "w-full rounded-[2rem] border border-white/8 px-7 py-6"
+    : "w-full rounded-[1.5rem] border border-white/8 px-4 py-3";
+  const cardHeight = isDesktop ? "min-h-[31rem]" : "min-h-0";
   const feedbackText = feedback?.text ?? "";
 
   useEffect(() => {
@@ -428,6 +428,169 @@ function VerdictCard({
     tiltY.set(0);
   }
 
+  if (isDesktop) {
+    return (
+      <motion.div
+        onPointerMove={handlePointerMove}
+        onPointerLeave={resetTilt}
+        onPointerCancel={resetTilt}
+        style={canTilt ? { rotateX, rotateY, transformPerspective: 1600 } : undefined}
+        className={cx(
+          "group relative overflow-hidden rounded-[2rem] border border-white/8 bg-surface-container-high p-6 shadow-surface-lg transition-[box-shadow,transform,border-color] duration-300 will-change-transform [transform-style:preserve-3d]",
+          canTilt ? "hover:border-secondary/18 hover:shadow-[0_34px_82px_rgba(0,0,0,0.52)]" : "",
+        )}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgba(48,200,232,0.08),transparent_28%),radial-gradient(circle_at_76%_72%,rgba(146,245,143,0.07),transparent_34%),linear-gradient(180deg,rgba(23,29,30,0.98),rgba(9,12,13,1))]" />
+        <motion.div
+          aria-hidden="true"
+          initial={false}
+          animate={{
+            opacity: direction === "trust" ? 0.62 : direction === "scam" ? 0.58 : 0,
+            scale: direction ? 1 : 0.94,
+          }}
+          transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+          className={cx(
+            "pointer-events-none absolute inset-0",
+            direction === "trust"
+              ? "bg-[radial-gradient(circle_at_74%_58%,rgba(146,245,143,0.2),transparent_42%)]"
+              : "bg-[radial-gradient(circle_at_74%_58%,rgba(255,116,108,0.17),transparent_42%)]",
+          )}
+        />
+
+        <div className="relative z-10 grid min-h-[30rem] grid-cols-[0.9fr_1.1fr] gap-6">
+          <section className="flex flex-col justify-between rounded-[1.5rem] border border-white/8 bg-black/16 p-6">
+            <div>
+              <Pill
+                tone={card.reputation >= 70 ? "primary" : "secondary"}
+                className="border-white/10 bg-surface-container-low px-3.5 py-1.5 text-[0.54rem] text-white"
+              >
+                <span className={cx("h-2 w-2 rounded-full", card.reputation >= 70 ? "bg-primary" : "bg-secondary")} />
+                {card.verification}
+              </Pill>
+
+              <div className="relative mt-6 w-fit">
+                <div className={cx("absolute inset-0 rounded-3xl blur-3xl", card.reputation >= 70 ? "bg-primary/10" : "bg-secondary/10")} />
+                <div className={cx("relative overflow-hidden border border-white/10 bg-surface-container-highest shadow-[0_16px_34px_rgba(0,0,0,0.3)]", imageSize)}>
+                  <ImageCard
+                    src={card.image}
+                    alt={card.name}
+                    priority
+                    sizes="220px"
+                    className="h-full w-full"
+                    imageClassName="object-cover object-center grayscale-[12%] contrast-110"
+                  />
+                  {!card.image ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="font-display text-[3.8rem] font-bold uppercase tracking-[-0.08em] text-white/88">
+                        {initials}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/52 via-transparent to-transparent" />
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h1 className="font-display text-[3.55rem] font-bold leading-[0.92] tracking-[-0.08em] text-white">
+                  {card.name}
+                </h1>
+                <p className="mt-1 font-label text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-secondary">
+                  {card.handle}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.82rem] text-on-surface-variant">
+                  <span>{card.role}</span>
+                  <span className="h-1 w-1 rounded-full bg-on-surface-variant/35" />
+                  <span>{card.globalRank}</span>
+                  <span className="h-1 w-1 rounded-full bg-on-surface-variant/35" />
+                  <span>Active</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-6 max-w-[26rem] text-[0.95rem] leading-7 text-on-surface-variant">
+              {card.bio}
+            </p>
+          </section>
+
+          <section className="flex flex-col justify-between rounded-[1.5rem] border border-white/8 bg-surface-container-low/78 p-6">
+            <div>
+              <div className="grid grid-cols-[1fr_auto] items-start gap-5">
+                <div>
+                  <div className="kv-label text-primary">Verdict Score</div>
+                  <div className="mt-3 flex items-end gap-2">
+                    <span className="font-display text-[5.1rem] font-bold leading-none tracking-[-0.09em] text-primary tabular-nums">
+                      {card.reputation}
+                    </span>
+                    <span className="pb-3 font-label text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-on-surface-variant">
+                      /100
+                    </span>
+                  </div>
+                </div>
+                {card.reasonTags.length > 0 ? (
+                  <div className="flex max-w-[13rem] flex-wrap justify-end gap-2">
+                    {card.reasonTags.slice(0, 2).map((tag) => (
+                      <span
+                        key={`${card.slug}-${tag.label}`}
+                        className={cx(
+                          "inline-flex items-center rounded-full border px-3 py-1.5 font-label text-[0.56rem] font-semibold uppercase tracking-[0.12em]",
+                          reasonTagToneClasses(tag.tone),
+                        )}
+                      >
+                        {tag.label}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="mt-8 rounded-[1.35rem] border border-white/8 bg-black/16 px-6 py-6">
+                <div className="kv-label text-on-surface-variant/80">Verdict Prompt</div>
+                <p className="mt-2 font-display text-[2.4rem] font-bold leading-[1] tracking-[-0.045em] text-white [word-spacing:0.08em]">
+                  Is this KOL trustworthy?
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <div
+                aria-live="polite"
+                className={cx(
+                  "min-h-[1.2rem] pb-3 text-center font-label text-[0.6rem] font-semibold uppercase tracking-[0.16em]",
+                  feedbackColorClass(feedback?.tone),
+                )}
+              >
+                {feedbackText}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <VerdictActionButton
+                  label="Reject"
+                  icon="close"
+                  tone="tertiary"
+                  successBurst={direction === "scam"}
+                  layout={layout}
+                  disabled={voteLocked}
+                  active={pendingDirection === "scam"}
+                  onClick={onReject}
+                />
+                <VerdictActionButton
+                  label="Endorse"
+                  icon="favorite"
+                  tone="primary"
+                  successBurst={direction === "trust"}
+                  layout={layout}
+                  disabled={voteLocked}
+                  active={pendingDirection === "trust"}
+                  onClick={onEndorse}
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       onPointerMove={handlePointerMove}
@@ -435,13 +598,13 @@ function VerdictCard({
       onPointerCancel={resetTilt}
       style={canTilt ? { rotateX, rotateY, transformPerspective: 1600 } : undefined}
       className={cx(
-        "group relative overflow-hidden bg-surface-container-high shadow-[0_36px_80px_rgba(0,0,0,0.54)] transition-[box-shadow,transform,border-color] duration-300 will-change-transform [transform-style:preserve-3d]",
+        "group relative overflow-hidden bg-surface-container-high shadow-surface-lg transition-[box-shadow,transform,border-color] duration-300 will-change-transform [transform-style:preserve-3d]",
         containerClasses,
         cardHeight,
-        canTilt ? "hover:shadow-[0_44px_96px_rgba(0,0,0,0.58),0_0_58px_rgba(0,207,252,0.08)]" : "",
+        canTilt ? "hover:border-secondary/18 hover:shadow-[0_34px_82px_rgba(0,0,0,0.52)]" : "",
       )}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(0,207,252,0.12),transparent_28%),radial-gradient(circle_at_50%_74%,rgba(156,255,147,0.09),transparent_34%),linear-gradient(180deg,rgba(21,26,30,0.98),rgba(9,11,13,1))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(48,200,232,0.08),transparent_30%),linear-gradient(180deg,rgba(23,29,30,0.98),rgba(9,12,13,1))]" />
       <div
         className={cx(
           "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.12),transparent_42%),radial-gradient(circle_at_50%_54%,rgba(0,207,252,0.16),transparent_54%)] opacity-0 transition-opacity duration-300",
@@ -463,13 +626,13 @@ function VerdictCard({
             : "bg-[radial-gradient(circle_at_50%_44%,rgba(255,77,109,0.2),transparent_44%)]",
         )}
       />
-      <div className="absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_62%)]" />
+      <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_62%)]" />
 
       <div className="relative z-10 flex h-full flex-col">
         <div className="flex justify-center">
           <Pill
             tone={card.reputation >= 70 ? "primary" : "secondary"}
-            className="border-white/10 bg-black/25 px-3.5 py-1.5 text-[0.54rem] text-white backdrop-blur-md"
+            className="border-white/10 bg-black/20 px-3 py-1.5 text-[0.52rem] text-white"
           >
             <span
               className={cx(
@@ -481,8 +644,8 @@ function VerdictCard({
           </Pill>
         </div>
 
-        <div className={cx("relative mx-auto mt-4", isDesktop ? "mb-5" : "mb-4")}>
-          <div className={cx("absolute inset-0 rounded-[2.35rem] blur-[40px]", card.reputation >= 70 ? "bg-primary/18" : "bg-secondary/16")} />
+        <div className={cx("relative mx-auto", isDesktop ? "mb-5 mt-3" : "mb-2 mt-2")}>
+          <div className={cx("absolute inset-0 rounded-[2rem] blur-2xl", card.reputation >= 70 ? "bg-primary/10" : "bg-secondary/10")} />
           <div className={cx("relative overflow-hidden border border-white/8 bg-surface-container-highest shadow-[0_18px_40px_rgba(0,0,0,0.32)]", imageSize)}>
             <ImageCard
               src={card.image}
@@ -496,8 +659,8 @@ function VerdictCard({
               <div className="absolute inset-0 flex items-center justify-center">
                 <span
                   className={cx(
-                    "font-display font-black uppercase tracking-[-0.08em] text-white/88",
-                    isDesktop ? "text-[4.2rem]" : "text-[3rem]",
+                    "font-display font-bold uppercase tracking-[-0.08em] text-white/88",
+                    isDesktop ? "text-[4.2rem]" : "text-[2.4rem]",
                   )}
                 >
                   {initials}
@@ -512,18 +675,18 @@ function VerdictCard({
           <h1
             className={cx(
               "font-display font-black leading-[0.92] tracking-[-0.08em] text-white",
-              isDesktop ? "text-[4.35rem]" : "text-[2.8rem]",
+              isDesktop ? "text-[4.35rem]" : "text-[2rem]",
             )}
           >
             {card.name}
           </h1>
-          <p className={cx("mt-1 font-display font-bold uppercase tracking-[0.19em] text-secondary", isDesktop ? "text-[0.78rem]" : "text-[0.64rem]")}>
+          <p className={cx("mt-1 font-label font-semibold uppercase tracking-[0.14em] text-secondary", isDesktop ? "text-[0.78rem]" : "text-[0.62rem]")}>
             {card.handle}
           </p>
           <div
             className={cx(
               "mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-on-surface-variant/70",
-              isDesktop ? "text-[0.74rem]" : "text-[0.62rem]",
+              isDesktop ? "text-[0.74rem]" : "text-[0.68rem]",
             )}
           >
             <span className="font-medium">{card.role}</span>
@@ -533,15 +696,15 @@ function VerdictCard({
             <span className="font-medium">Active</span>
           </div>
 
-          <div className="mx-auto mt-4 w-fit rounded-[1.35rem] border border-primary/20 bg-black/28 px-5 py-3 shadow-[0_0_28px_rgba(156,255,147,0.12)]">
-            <div className="font-display text-[0.54rem] font-black uppercase tracking-[0.24em] text-primary/80">
+          <div className={cx("mx-auto w-fit border border-primary/20 bg-black/20 shadow-[0_16px_34px_rgba(0,0,0,0.28)]", isDesktop ? "mt-3 rounded-2xl px-4 py-3" : "mt-2 rounded-xl px-3 py-2")}>
+            <div className="font-label text-[0.54rem] font-semibold uppercase tracking-[0.14em] text-primary/90">
               Verdict Score
             </div>
             <div className="mt-1.5 flex items-end justify-center gap-1">
-              <span className={cx("font-display font-black leading-none tracking-[-0.08em] text-primary", isDesktop ? "text-[4.15rem]" : "text-[3.15rem]")}>
+              <span className={cx("font-display font-bold leading-none tracking-[-0.08em] text-primary", isDesktop ? "text-[4.15rem]" : "text-[2.25rem]")}>
                 {card.reputation}
               </span>
-              <span className={cx("font-display font-bold uppercase tracking-[0.16em] text-on-surface-variant", isDesktop ? "pb-1.5 text-[0.78rem]" : "pb-1 text-[0.68rem]")}>/100</span>
+              <span className={cx("font-label font-semibold uppercase tracking-[0.12em] text-on-surface-variant", isDesktop ? "pb-1.5 text-[0.78rem]" : "pb-1 text-[0.66rem]")}>/100</span>
             </div>
           </div>
 
@@ -550,7 +713,7 @@ function VerdictCard({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
-              className="mt-3 flex flex-wrap items-center justify-center gap-2"
+              className={cx("flex flex-wrap items-center justify-center gap-2", isDesktop ? "mt-3" : "mt-2")}
             >
               {card.reasonTags.slice(0, 2).map((tag, index) => (
                 <motion.span
@@ -559,7 +722,8 @@ function VerdictCard({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, ease: [0.2, 0, 0, 1], delay: index * 0.05 }}
                   className={cx(
-                    "inline-flex items-center rounded-full border px-3 py-1.5 font-display text-[0.64rem] font-bold tracking-[0.04em] shadow-[0_12px_26px_rgba(0,0,0,0.18)]",
+                    "inline-flex items-center rounded-full border font-label font-semibold uppercase tracking-[0.1em]",
+                    isDesktop ? "px-3 py-1.5 text-[0.56rem]" : "px-2.5 py-1 text-[0.5rem]",
                     reasonTagToneClasses(tag.tone),
                   )}
                 >
@@ -571,12 +735,12 @@ function VerdictCard({
 
           <p
             className={cx(
-              "mx-auto mt-3 max-w-[30rem] text-on-surface-variant",
-              isDesktop ? "text-[0.96rem] leading-7" : "text-[0.88rem] leading-6",
+              "mx-auto max-w-[30rem] text-on-surface-variant",
+              isDesktop ? "mt-3 text-[0.96rem] leading-7" : "mt-2 text-[0.76rem] leading-5",
             )}
             style={{
               display: "-webkit-box",
-              WebkitLineClamp: 2,
+              WebkitLineClamp: isDesktop ? 2 : 1,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
@@ -585,32 +749,33 @@ function VerdictCard({
           </p>
         </div>
 
-        <div className={cx("mt-4 rounded-[1.55rem] border border-white/7 bg-black/18 text-center", isDesktop ? "px-7 py-5" : "px-4 py-4")}>
-          <div className="font-display text-[0.54rem] font-black uppercase tracking-[0.24em] text-on-surface-variant/75">
+        <div className={cx("rounded-2xl border border-white/8 bg-black/16 text-center", isDesktop ? "mt-4 px-7 py-5" : "mt-3 px-3 py-3")}>
+          <div className="font-label text-[0.54rem] font-semibold uppercase tracking-[0.14em] text-on-surface-variant/75">
             Verdict Prompt
           </div>
           <p
             className={cx(
-              "mt-2 font-display font-black leading-[0.95] tracking-[-0.06em] text-white",
-              isDesktop ? "text-[2.35rem]" : "text-[1.82rem]",
+              "mt-2 font-display font-bold leading-[1] tracking-[-0.04em] text-white [word-spacing:0.08em]",
+              isDesktop ? "text-[2.35rem]" : "text-[1.22rem]",
             )}
           >
             Is this KOL trustworthy?
           </p>
         </div>
 
-        <div className="mt-4">
+        <div className={cx(isDesktop ? "mt-4" : "mt-3")}>
           <div
             aria-live="polite"
             className={cx(
-              "min-h-[1rem] pb-3 text-center font-display text-[0.56rem] font-bold uppercase tracking-[0.22em]",
+              "text-center font-label text-[0.56rem] font-semibold uppercase tracking-[0.14em]",
+              isDesktop ? "min-h-[1rem] pb-2" : "min-h-3 pb-1",
               feedbackColorClass(feedback?.tone),
             )}
           >
             {feedbackText}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className={cx("grid grid-cols-2", isDesktop ? "gap-3" : "gap-2.5")}>
             <VerdictActionButton
               label="Reject"
               icon="close"
@@ -644,25 +809,25 @@ function VerdictLoadingState({ layout }: { layout: VerdictCardLayout }) {
   return (
     <div
       className={cx(
-        "relative overflow-hidden rounded-[2.45rem] border border-white/7 bg-surface-container-high shadow-[0_36px_80px_rgba(0,0,0,0.54)]",
-        isDesktop ? "mx-auto w-full max-w-[48rem] px-10 pb-8 pt-7" : "w-full px-5 pb-5 pt-5",
+        "relative overflow-hidden rounded-[1.8rem] border border-white/8 bg-surface-container-high shadow-surface-lg",
+        isDesktop ? "w-full px-7 py-6" : "w-full px-4 py-4",
       )}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(0,207,252,0.12),transparent_28%),linear-gradient(180deg,rgba(21,26,30,0.98),rgba(9,11,13,1))]" />
       <div className="relative z-10 flex flex-col items-center text-center">
         <div className="h-8 w-36 rounded-full bg-white/10 motion-safe:animate-pulse" />
-        <div className={cx("mt-5 rounded-[2.1rem] bg-white/6 motion-safe:animate-pulse", isDesktop ? "h-52 w-52" : "h-40 w-40")} />
+        <div className={cx("mt-5 rounded-3xl bg-white/6 motion-safe:animate-pulse", isDesktop ? "h-44 w-44" : "h-28 w-28")} />
         <div className="mt-5 h-4 w-28 rounded-full bg-white/10 motion-safe:animate-pulse" />
         <div className={cx("mt-4 h-12 rounded-full bg-white/10 motion-safe:animate-pulse", isDesktop ? "w-80" : "w-56")} />
-        <div className={cx("mt-4 h-24 rounded-[1.35rem] border border-white/6 bg-black/20 px-6 py-4 motion-safe:animate-pulse", isDesktop ? "w-52" : "w-44")} />
+        <div className={cx("mt-4 h-20 rounded-2xl border border-white/6 bg-black/20 px-6 py-4 motion-safe:animate-pulse", isDesktop ? "w-52" : "w-40")} />
         <div className="mt-3 flex items-center justify-center gap-2">
           <div className="h-7 w-24 rounded-full bg-white/8 motion-safe:animate-pulse" />
           <div className="h-7 w-20 rounded-full bg-white/8 motion-safe:animate-pulse" />
         </div>
-        <div className={cx("mt-4 h-[4.5rem] rounded-[1.55rem] border border-white/6 bg-black/16 motion-safe:animate-pulse", isDesktop ? "w-[34rem]" : "w-full")} />
+        <div className={cx("mt-4 h-16 rounded-2xl border border-white/6 bg-black/16 motion-safe:animate-pulse", isDesktop ? "w-[34rem]" : "w-full")} />
         <div className="mt-4 grid w-full grid-cols-2 gap-3">
-          <div className={cx("rounded-[1.35rem] bg-white/8 motion-safe:animate-pulse", isDesktop ? "h-[4.9rem]" : "h-[4.35rem]")} />
-          <div className={cx("rounded-[1.35rem] bg-white/10 motion-safe:animate-pulse", isDesktop ? "h-[4.9rem]" : "h-[4.35rem]")} />
+          <div className={cx("rounded-2xl bg-white/8 motion-safe:animate-pulse", isDesktop ? "h-16" : "h-14")} />
+          <div className={cx("rounded-2xl bg-white/10 motion-safe:animate-pulse", isDesktop ? "h-16" : "h-14")} />
         </div>
       </div>
     </div>
@@ -687,8 +852,8 @@ function VerdictQueueEmptyState({
   return (
     <div
       className={cx(
-        "relative overflow-hidden rounded-[2.45rem] border border-white/7 bg-surface-container-high shadow-[0_36px_80px_rgba(0,0,0,0.54)]",
-        isDesktop ? "mx-auto w-full max-w-[48rem] px-10 pb-9 pt-7" : "w-full px-5 pb-6 pt-5",
+        "relative overflow-hidden rounded-[1.8rem] border border-white/8 bg-surface-container-high shadow-surface-lg",
+        isDesktop ? "w-full px-7 py-7" : "w-full px-4 py-5",
       )}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(0,207,252,0.12),transparent_28%),radial-gradient(circle_at_50%_78%,rgba(156,255,147,0.09),transparent_34%),linear-gradient(180deg,rgba(21,26,30,0.98),rgba(9,11,13,1))]" />
@@ -698,15 +863,15 @@ function VerdictQueueEmptyState({
           {copy.eyebrow}
         </Pill>
 
-        <div className={cx("relative mt-8 flex items-center justify-center rounded-[2.3rem] border border-white/8 bg-surface-container-highest/70", isDesktop ? "h-52 w-52" : "h-40 w-40")}>
-          <div className="absolute inset-0 rounded-[2.3rem] bg-[radial-gradient(circle_at_center,rgba(0,207,252,0.18),transparent_55%)]" />
-          <Icon name={state === "error" ? "warning" : "check_circle"} className={cx("relative z-10 text-secondary", isDesktop ? "text-[5rem]" : "text-[4rem]")} />
+        <div className={cx("relative mt-6 flex items-center justify-center rounded-3xl border border-white/8 bg-surface-container-highest/70", isDesktop ? "h-36 w-36" : "h-28 w-28")}>
+          <div className="absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_center,rgba(48,200,232,0.14),transparent_55%)]" />
+          <Icon name={state === "error" ? "warning" : "check_circle"} className={cx("relative z-10 text-secondary", isDesktop ? "text-[3.6rem]" : "text-[3rem]")} />
         </div>
 
-        <h2 className={cx("mt-8 font-display font-black leading-[0.92] tracking-[-0.08em] text-white", isDesktop ? "text-[4rem]" : "text-[2.85rem]")}>
+        <h2 className={cx("mt-6 font-display font-bold leading-[0.98] tracking-[-0.075em] text-white", isDesktop ? "text-[3.1rem]" : "text-[2rem]")}>
           {copy.title}
         </h2>
-        <p className={cx("mt-4 max-w-[30rem] text-on-surface-variant", isDesktop ? "text-lg leading-8" : "text-sm leading-7")}>
+        <p className={cx("mt-3 max-w-[30rem] text-on-surface-variant", isDesktop ? "text-base leading-7" : "text-sm leading-6")}>
           {copy.message}
         </p>
 
@@ -714,7 +879,7 @@ function VerdictQueueEmptyState({
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-full border border-secondary/20 bg-secondary/10 px-5 py-3 font-display text-[0.62rem] font-bold uppercase tracking-[0.2em] text-secondary transition-colors duration-300 hover:bg-secondary/16"
+            className="kv-focus-ring rounded-xl border border-secondary/25 bg-secondary/10 px-5 py-3 font-label text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-secondary transition-colors duration-200 hover:bg-secondary/16"
           >
             {retryLabel}
           </button>
@@ -722,7 +887,7 @@ function VerdictQueueEmptyState({
           {showLeaderboard ? (
             <Link
               href="/leaderboard"
-              className="rounded-full border border-white/10 bg-white/5 px-5 py-3 font-display text-[0.62rem] font-bold uppercase tracking-[0.2em] text-on-surface transition-colors duration-300 hover:bg-white/8"
+              className="kv-focus-ring rounded-xl border border-white/10 bg-white/5 px-5 py-3 font-label text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-on-surface transition-colors duration-200 hover:bg-white/8"
             >
               Leaderboard
             </Link>
@@ -731,7 +896,7 @@ function VerdictQueueEmptyState({
           {showAddKol ? (
             <Link
               href="/add"
-              className="rounded-full border border-primary/20 bg-primary/10 px-5 py-3 font-display text-[0.62rem] font-bold uppercase tracking-[0.2em] text-primary transition-colors duration-300 hover:bg-primary/16"
+              className="kv-focus-ring rounded-xl border border-primary/20 bg-primary/10 px-5 py-3 font-label text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-primary transition-colors duration-200 hover:bg-primary/16"
             >
               Add KOL
             </Link>
@@ -768,8 +933,8 @@ function DesktopVerdictSurface({
   onVote: (card: HomeCardView, next: SwipeDirection) => Promise<void>;
 }) {
   return (
-    <div className="relative flex w-full max-w-[48rem] flex-col gap-4">
-      <VerdictProgress reviewed={reviewedCount} total={totalCount} layout="desktop" />
+    <div className="relative flex w-full flex-col gap-4">
+      <VerdictProgress reviewed={reviewedCount} total={totalCount} />
       <AnimatePresence mode="wait" initial={false}>
         {!isTransitioning ? (
           <motion.div
@@ -831,8 +996,8 @@ function MobileVerdictSurface({
   onVote: (card: HomeCardView, next: SwipeDirection) => Promise<void>;
 }) {
   return (
-    <div className="relative flex w-full max-w-[22.5rem] flex-col gap-3">
-      <VerdictProgress reviewed={reviewedCount} total={totalCount} layout="mobile" />
+    <div className="relative flex w-full max-w-[23.25rem] flex-col gap-2">
+      <VerdictProgress reviewed={reviewedCount} total={totalCount} />
       <AnimatePresence mode="wait" initial={false}>
         {!isTransitioning ? (
           <motion.div
@@ -875,7 +1040,7 @@ function MobileVerdictSurface({
         ) : null}
       </AnimatePresence>
 
-      <VerdictGestureHint layout="mobile" subdued={voteLocked || isTransitioning} />
+      <VerdictGestureHint layout="mobile" subdued={voteLocked || isTransitioning} className="hidden" />
 
       {!session ? null : <QueueImagePreload card={nextCard} />}
     </div>
@@ -1157,10 +1322,8 @@ export function HomeScreen() {
   return (
     <>
       <MobileShell navKey="home" avatar={brandAvatar} rightIconTone="secondary">
-        <section className="relative flex min-h-[calc(100vh-12rem)] items-center justify-center py-2">
-          <div className="absolute inset-x-0 top-14 h-44 rounded-full bg-secondary/8 blur-[100px]" />
-          <div className="absolute -left-10 top-1/3 h-72 w-44 rounded-full bg-secondary/8 blur-[120px]" />
-          <div className="absolute -right-12 bottom-1/4 h-80 w-52 rounded-full bg-primary/8 blur-[130px]" />
+        <section className="relative flex min-h-[calc(100dvh-13rem)] items-start justify-center py-0">
+          <div className="absolute inset-x-0 top-10 h-36 rounded-full bg-secondary/5 blur-[90px]" />
 
           {showQueueSurface && activeCard ? (
             <MobileVerdictSurface
@@ -1177,11 +1340,11 @@ export function HomeScreen() {
               onVote={submitVote}
             />
           ) : loadState === "loading" ? (
-            <div className="w-full max-w-[22.5rem]">
+            <div className="w-full max-w-[23.25rem]">
               <VerdictLoadingState layout="mobile" />
             </div>
           ) : (
-            <div className="w-full max-w-[22.5rem]">
+            <div className="w-full max-w-[23.25rem]">
               <VerdictQueueEmptyState
                 state={loadState === "ready" ? "exhausted" : loadState}
                 layout="mobile"
@@ -1198,33 +1361,35 @@ export function HomeScreen() {
         searchPlaceholder="Search Oracles..."
         className="relative"
       >
-        <section className="relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden bg-gradient-to-b from-surface via-surface-container-lowest to-surface px-8 pb-10 pt-8">
-          <div className="absolute left-6 top-20 h-[22rem] w-[22rem] rounded-full bg-secondary/6 blur-[120px]" />
-          <div className="absolute bottom-0 right-14 h-[24rem] w-[24rem] rounded-full bg-primary/6 blur-[130px]" />
+        <section className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-b from-surface via-surface-container-lowest to-surface py-6">
+          <div className="absolute left-10 top-20 h-[20rem] w-[20rem] rounded-full bg-secondary/4 blur-[120px]" />
+          <div className="absolute bottom-0 right-14 h-[22rem] w-[22rem] rounded-full bg-primary/4 blur-[130px]" />
 
-          {showQueueSurface && activeCard ? (
-            <DesktopVerdictSurface
-              activeCard={activeCard}
-              direction={direction}
-              voteLocked={voteLocked}
-              pendingVote={pendingVote}
-              feedback={feedback}
-              nextCard={nextCard}
-              session={session}
-              isTransitioning={isTransitioning}
-              reviewedCount={reviewedCount}
-              totalCount={queue.length}
-              onVote={submitVote}
-            />
-          ) : loadState === "loading" ? (
-            <VerdictLoadingState layout="desktop" />
-          ) : (
-            <VerdictQueueEmptyState
-              state={loadState === "ready" ? "exhausted" : loadState}
-              layout="desktop"
-              onRetry={refreshQueue}
-            />
-          )}
+          <div className="mx-auto w-full max-w-5xl px-6">
+            {showQueueSurface && activeCard ? (
+              <DesktopVerdictSurface
+                activeCard={activeCard}
+                direction={direction}
+                voteLocked={voteLocked}
+                pendingVote={pendingVote}
+                feedback={feedback}
+                nextCard={nextCard}
+                session={session}
+                isTransitioning={isTransitioning}
+                reviewedCount={reviewedCount}
+                totalCount={queue.length}
+                onVote={submitVote}
+              />
+            ) : loadState === "loading" ? (
+              <VerdictLoadingState layout="desktop" />
+            ) : (
+              <VerdictQueueEmptyState
+                state={loadState === "ready" ? "exhausted" : loadState}
+                layout="desktop"
+                onRetry={refreshQueue}
+              />
+            )}
+          </div>
         </section>
       </DesktopShell>
     </>

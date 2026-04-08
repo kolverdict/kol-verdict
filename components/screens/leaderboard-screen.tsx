@@ -32,12 +32,81 @@ function rankLabel(index: number) {
   return String(index + 1).padStart(2, "0");
 }
 
+function trendArrowIcon(tab: LeaderboardTab) {
+  return tab === "hated" ? "arrow_downward" : "arrow_upward";
+}
+
+function trendAccentClass(tab: LeaderboardTab, muted?: boolean) {
+  if (tab === "hated") {
+    return muted ? "text-tertiary/70" : "text-tertiary";
+  }
+
+  return muted ? "text-primary/70" : "text-primary";
+}
+
+function MiniSparkline({
+  values,
+  tab,
+  muted,
+  className,
+}: {
+  values: number[];
+  tab: LeaderboardTab;
+  muted?: boolean;
+  className?: string;
+}) {
+  const width = 72;
+  const height = 24;
+  const inset = 2;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(1, max - min);
+  const strokeClassName =
+    tab === "hated"
+      ? muted
+        ? "text-tertiary/65"
+        : "text-tertiary"
+      : muted
+        ? "text-primary/65"
+        : "text-primary";
+  const points = values
+    .map((value, index) => {
+      const x = values.length === 1 ? width / 2 : inset + (index / (values.length - 1)) * (width - inset * 2);
+      const y = height - inset - ((value - min) / range) * (height - inset * 2);
+      return `${x},${y}`;
+    })
+    .join(" ");
+  const lastX = values.length === 1 ? width / 2 : inset + (width - inset * 2);
+  const lastY = height - inset - ((values[values.length - 1] - min) / range) * (height - inset * 2);
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      aria-hidden="true"
+      className={cx("overflow-visible", strokeClassName, className)}
+    >
+      <path d={`M ${inset} ${height - inset} H ${width - inset}`} className="stroke-current/20" strokeWidth="1.5" />
+      <polyline
+        fill="none"
+        points={points}
+        className="stroke-current"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx={lastX} cy={lastY} r="2.5" className="fill-current" />
+    </svg>
+  );
+}
+
 function LeaderboardMobileRow({
   entry,
   rank,
+  tab,
 }: {
   entry: LeaderboardEntryView;
   rank: string;
+  tab: LeaderboardTab;
 }) {
   return (
     <div className="glass-panel flex items-center gap-4 rounded-[2rem] border border-white/5 px-4 py-4 transition-colors duration-300 hover:bg-surface-container-high">
@@ -54,7 +123,16 @@ function LeaderboardMobileRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="font-display text-[1.85rem] font-black tracking-[-0.06em] text-white">{entry.handle}</div>
-        <div className="mt-1 flex items-center gap-3">
+        <div className="mt-2 flex items-center gap-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/6 bg-surface-container-highest/65 px-3 py-1.5">
+            <Icon name={trendArrowIcon(tab)} className={cx("text-[0.95rem]", trendAccentClass(tab, entry.muted))} />
+            <span className={cx("font-display text-[1rem] font-black tracking-[-0.05em]", entry.muted ? "text-white" : "text-primary")}>
+              {entry.trustScore}
+            </span>
+            <MiniSparkline values={entry.sparkline} tab={tab} muted={entry.muted} className="h-5 w-16" />
+          </div>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span
             className={cx(
               "font-display text-[0.74rem] font-bold uppercase tracking-[0.14em]",
@@ -69,6 +147,9 @@ function LeaderboardMobileRow({
           </span>
           <span className="font-display text-[0.74rem] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
             {entry.flowLabel}
+          </span>
+          <span className="font-display text-[0.74rem] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+            {entry.verdictCountLabel}
           </span>
         </div>
       </div>
@@ -89,8 +170,9 @@ function LeaderboardMobileSkeleton({ rank }: { rank: string }) {
         {rank}
       </div>
       <div className="h-18 w-18 rounded-[1.15rem] bg-surface-container-highest/70 motion-safe:animate-pulse" />
-      <div className="flex-1 space-y-2">
+      <div className="flex-1 space-y-2.5">
         <div className="h-7 w-32 rounded-md bg-surface-container-highest/70 motion-safe:animate-pulse" />
+        <div className="h-8 w-36 rounded-full bg-surface-container-highest/60 motion-safe:animate-pulse" />
         <div className="h-4 w-40 rounded-md bg-surface-container-highest/40 motion-safe:animate-pulse" />
       </div>
       <div className="h-11 w-18 rounded-[1rem] bg-surface-container-highest/70 motion-safe:animate-pulse" />
@@ -101,9 +183,11 @@ function LeaderboardMobileSkeleton({ rank }: { rank: string }) {
 function DesktopLeaderboardRow({
   entry,
   rank,
+  tab,
 }: {
   entry: LeaderboardEntryView;
   rank: string;
+  tab: LeaderboardTab;
 }) {
   return (
     <div className="grid grid-cols-[80px_1fr_200px_200px_160px] items-center gap-4 px-8 py-6 transition-colors duration-300 hover:bg-white/[0.02]">
@@ -125,19 +209,12 @@ function DesktopLeaderboardRow({
       </div>
 
       <div className="space-y-1">
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2.5">
+          <Icon name={trendArrowIcon(tab)} className={cx("text-[1rem]", trendAccentClass(tab, entry.muted))} />
           <div className={cx("font-display text-[2rem] font-black tracking-[-0.06em]", entry.muted ? "text-white" : "text-primary")}>
             {entry.trustScore}
           </div>
-          <div className="flex h-6 items-end gap-[3px] pb-[2px]">
-            {entry.sparkline.map((bar, idx) => (
-              <span
-                key={`${entry.slug}-${idx}`}
-                className={cx("w-1 rounded-t-sm", entry.muted ? "bg-white/20" : "bg-primary/75")}
-                style={{ height: `${bar}%` }}
-              />
-            ))}
-          </div>
+          <MiniSparkline values={entry.sparkline} tab={tab} muted={entry.muted} className="h-7 w-[4.6rem]" />
         </div>
         <div
           className={cx(
@@ -159,6 +236,10 @@ function DesktopLeaderboardRow({
             <div className="bg-primary" style={{ width: `${entry.bullishPercent}%` }} />
             <div className="bg-tertiary" style={{ width: `${100 - entry.bullishPercent}%` }} />
           </div>
+        </div>
+        <div className="flex items-center justify-between font-display text-[0.5rem] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+          <span>Total Verdicts</span>
+          <span className="text-white">{entry.verdictCountLabel}</span>
         </div>
       </div>
 
@@ -186,12 +267,16 @@ function DesktopLeaderboardSkeleton({ rank }: { rank: string }) {
         </div>
       </div>
       <div className="space-y-2">
-        <div className="h-8 w-24 rounded-md bg-surface-container-highest/70 motion-safe:animate-pulse" />
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-24 rounded-md bg-surface-container-highest/70 motion-safe:animate-pulse" />
+          <div className="h-6 w-18 rounded-full bg-surface-container-highest/50 motion-safe:animate-pulse" />
+        </div>
         <div className="h-3 w-20 rounded-md bg-surface-container-highest/40 motion-safe:animate-pulse" />
       </div>
       <div className="space-y-2">
         <div className="h-3 w-28 rounded-md bg-surface-container-highest/40 motion-safe:animate-pulse" />
         <div className="h-1.5 w-full rounded-full bg-surface-container-highest/70 motion-safe:animate-pulse" />
+        <div className="h-3 w-24 rounded-md bg-surface-container-highest/40 motion-safe:animate-pulse" />
       </div>
       <div className="ml-auto h-10 w-28 rounded-full bg-surface-container-highest/70 motion-safe:animate-pulse" />
     </div>
@@ -324,7 +409,9 @@ export function LeaderboardScreen() {
               </div>
             ) : null}
 
-            {!error && mobileEntries.map((entry, index) => <LeaderboardMobileRow key={entry.slug} entry={entry} rank={rankLabel(index)} />)}
+            {!error && mobileEntries.map((entry, index) => (
+              <LeaderboardMobileRow key={entry.slug} entry={entry} rank={rankLabel(index)} tab={backendTab} />
+            ))}
           </div>
         </section>
       </MobileShell>
@@ -400,7 +487,7 @@ export function LeaderboardScreen() {
               {isLoading && !snapshot ? Array.from({ length: 5 }, (_, index) => <DesktopLeaderboardSkeleton key={index} rank={rankLabel(index)} />) : null}
 
               {!isLoading && !error && desktopEntries.map((entry, index) => (
-                <DesktopLeaderboardRow key={entry.slug} entry={entry} rank={rankLabel(index)} />
+                <DesktopLeaderboardRow key={entry.slug} entry={entry} rank={rankLabel(index)} tab={backendTab} />
               ))}
 
               {!isLoading && (error || desktopEntries.length === 0) ? (

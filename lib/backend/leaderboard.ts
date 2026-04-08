@@ -29,7 +29,8 @@ function mapRealEntry(kol: KolRow, metrics?: Partial<KolMetricsCacheRow>): Leade
   const hateScore = metrics?.hate_count ?? 0;
   const trendingScore = metrics?.trending_score ?? 0;
   const loveCount = metrics?.love_count ?? 0;
-  const total = Math.max(1, loveCount + hateScore);
+  const verdictCount = loveCount + hateScore;
+  const total = Math.max(1, verdictCount);
   const bullishPercent = Math.round((loveCount / total) * 100);
   const sentimentCount = loveCount + hateScore + (metrics?.total_comments ?? 0);
   const trendValue = Math.max(0, trendingScore / 10);
@@ -43,11 +44,13 @@ function mapRealEntry(kol: KolRow, metrics?: Partial<KolMetricsCacheRow>): Leade
     trustScore: Math.round(trustScore * 10),
     hateScore,
     trendingScore,
+    verdictCount,
+    verdictCountLabel: `${formatCompactNumber(verdictCount)} ${verdictCount === 1 ? "verdict" : "verdicts"}`,
     bullishPercent,
     tier: scoreToTier(Math.round(trustScore * 10)),
     sparkline: sparklineFromScore(trustScore),
     verified: Boolean(kol.wallet_address) || sentimentCount >= 5,
-    flowLabel: `${formatCompactNumber(loveCount + hateScore)} SIGNALS`,
+    flowLabel: `${formatCompactNumber(verdictCount)} SIGNALS`,
     trendLabel: `+${trendValue.toFixed(1)}% ${trendingScore >= 60 ? "GAIN" : "STABLE"}`,
     trendTone: trendingScore >= 60 ? "primary" : "secondary",
     muted: trustScore < 80,

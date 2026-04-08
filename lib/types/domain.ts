@@ -44,6 +44,11 @@ export interface HomeStatView {
   tone?: Tone;
 }
 
+export interface ReasonTagView {
+  label: string;
+  tone: Tone;
+}
+
 export interface HomeCardView {
   slug: string;
   handle: string;
@@ -57,6 +62,7 @@ export interface HomeCardView {
   bio: string;
   monthlyChange: string;
   globalRank: string;
+  reasonTags: ReasonTagView[];
   stats: HomeStatView[];
 }
 
@@ -69,6 +75,8 @@ export interface LeaderboardEntryView {
   trustScore: number;
   hateScore: number;
   trendingScore: number;
+  verdictCount: number;
+  verdictCountLabel: string;
   bullishPercent: number;
   tier: string;
   sparkline: number[];

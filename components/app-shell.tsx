@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { navItems, type NavKey } from "@/lib/mock-data";
 import { cx } from "@/lib/utils";
 import { GhostButton, Icon, ImageCard } from "@/components/ui";
@@ -26,6 +29,55 @@ export function MobileShell({
   children,
   className,
 }: MobileShellProps) {
+  const pathname = usePathname();
+  const [navVisible, setNavVisible] = useState(true);
+  const previousPathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+
+    function updateVisibility() {
+      if (previousPathnameRef.current !== pathname) {
+        previousPathnameRef.current = pathname;
+        lastScrollY = window.scrollY;
+        setNavVisible(true);
+        ticking = false;
+        return;
+      }
+
+      const nextScrollY = window.scrollY;
+      const delta = nextScrollY - lastScrollY;
+      const nearTop = nextScrollY < 72;
+
+      if (nearTop) {
+        setNavVisible(true);
+      } else if (Math.abs(delta) >= 8) {
+        setNavVisible(delta < 0);
+        lastScrollY = nextScrollY;
+      }
+
+      if (nearTop) {
+        lastScrollY = nextScrollY;
+      }
+
+      ticking = false;
+    }
+
+    function handleScroll() {
+      if (!ticking) {
+        window.requestAnimationFrame(updateVisibility);
+        ticking = true;
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [pathname]);
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background md:hidden">
       <header className="glass-panel fixed inset-x-0 top-0 z-40 flex h-[5.5rem] items-center justify-between border-b border-white/5 px-5 shadow-[0_24px_48px_rgba(0,0,0,0.35)] md:hidden">
@@ -59,9 +111,23 @@ export function MobileShell({
         </button>
       </header>
 
-      <main className={cx("px-5 pb-34 pt-24", className)}>{children}</main>
+      <main className={cx("px-5 pb-[8.2rem] pt-24", className)}>{children}</main>
 
-      <nav className="glass-panel fixed inset-x-0 bottom-0 z-40 rounded-t-[2rem] border-t border-white/6 px-3 pb-7 pt-3 shadow-[0_-12px_32px_rgba(0,0,0,0.45)] md:hidden">
+      <motion.nav
+        initial={false}
+        animate={{
+          y: navVisible ? 0 : 108,
+          opacity: navVisible ? 1 : 0,
+        }}
+        transition={{
+          duration: 0.24,
+          ease: [0.2, 0, 0, 1],
+        }}
+        className={cx(
+          "fixed inset-x-0 bottom-0 z-40 rounded-t-[2rem] border-t border-white/6 bg-[rgba(11,13,16,0.64)] px-3 pb-5 pt-2.5 shadow-[0_-12px_32px_rgba(0,0,0,0.4)] backdrop-blur-[20px] md:hidden",
+          navVisible ? "pointer-events-auto" : "pointer-events-none",
+        )}
+      >
         <div className="grid grid-cols-4 gap-2">
           {navItems.map((item) => {
             const active = item.key === navKey;
@@ -71,17 +137,17 @@ export function MobileShell({
                 key={item.key}
                 href={item.href}
                 className={cx(
-                  "flex flex-col items-center justify-center rounded-[1.3rem] px-2 py-3 text-[0.56rem] font-display font-bold uppercase tracking-[0.18em] transition-colors",
+                  "flex flex-col items-center justify-center rounded-[1.3rem] px-2 py-2.5 text-[0.56rem] font-display font-bold uppercase tracking-[0.18em] transition-colors",
                   active ? "bg-secondary/12 text-secondary" : "text-zinc-500 hover:bg-white/4 hover:text-on-surface",
                 )}
               >
-                <Icon name={item.icon} className="mb-1 text-[1.45rem]" filled={active} />
+                <Icon name={item.icon} className="mb-0.5 text-[1.35rem]" filled={active} />
                 {item.label}
               </Link>
             );
           })}
         </div>
-      </nav>
+      </motion.nav>
     </div>
   );
 }

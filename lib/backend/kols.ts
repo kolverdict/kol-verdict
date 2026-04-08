@@ -22,6 +22,7 @@ import type {
   KolCommentRow,
   KolMetricsCacheRow,
   KolRow,
+  KolVoteRow,
   PaymentStatus,
   ProfileRow,
   VoteDirection,
@@ -34,6 +35,16 @@ type JoinedKolCommentRow = KolCommentRow & {
     | null;
   comment_evidence?: CommentEvidenceRow[] | null;
 };
+
+type HomeReasonSource = "vote" | "comment";
+type HomeReasonAggregate = {
+  label: string;
+  tone: Tone;
+  count: number;
+  latestAt: number;
+};
+
+const HOME_REASON_TAG_LIMIT = 2;
 
 function toArray<T>(value: T | T[] | null | undefined) {
   if (!value) return [] as T[];
@@ -352,7 +363,147 @@ function buildHomeVerification(entry: Pick<LeaderboardEntryView, "trustScore" | 
   return "Registry Tracked";
 }
 
-function mapHomeCard(entry: LeaderboardEntryView, index: number): HomeCardView {
+function normalizeHomeReasonTag(tag: string | null | undefined, source: HomeReasonSource) {
+  const normalized = tag?.trim().toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (source === "vote" && ["trust", "scam", "endorse", "reject", "love", "hate"].includes(normalized)) {
+    return null;
+  }
+
+  if (["rug", "risk", "warning", "flagged"].some((keyword) => normalized.includes(keyword))) {
+    return { label: "Rug risk", tone: "tertiary" as const };
+  }
+
+  if (source === "comment" && normalized === "scam") {
+    return { label: "Rug risk", tone: "tertiary" as const };
+  }
+
+  if (["accurate", "verified", "legit", "good"].some((keyword) => normalized.includes(keyword))) {
+    return { label: "High accuracy", tone: "primary" as const };
+  }
+
+  if (["alpha", "early", "sol"].some((keyword) => normalized.includes(keyword))) {
+    return { label: "Early SOL call", tone: "secondary" as const };
+  }
+
+  if (["bull", "bullish"].some((keyword) => normalized.includes(keyword))) {
+    return { label: "Bullish signal", tone: "primary" as const };
+  }
+
+  return null;
+}
+
+function dedupeReasonTags(tags: HomeCardView["reasonTags"]) {
+  const seen = new Set<string>();
+  const deduped: HomeCardView["reasonTags"] = [];
+
+  tags.forEach((tag) => {
+    const key = tag.label.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    deduped.push(tag);
+  });
+
+  return deduped;
+}
+
+function buildFallbackHomeReasonTags(entry: LeaderboardEntryView): HomeCardView["reasonTags"] {
+  const fallbackTags: HomeCardView["reasonTags"] = [];
+  const reputation = Math.round(entry.trustScore / 10);
+
+  if (entry.verdictCount > 0 && entry.bullishPercent <= 45) {
+    fallbackTags.push({ label: "Rug risk", tone: "tertiary" });
+  }
+
+  if (reputation >= 80) {
+    fallbackTags.push({ label: "High accuracy", tone: "primary" });
+  }
+
+  if (entry.trendingScore >= 60) {
+    fallbackTags.push({ label: "Trending signal", tone: "secondary" });
+  }
+
+  if (entry.verified) {
+    fallbackTags.push({ label: "Community verified", tone: "primary" });
+  }
+
+  return dedupeReasonTags(fallbackTags).slice(0, HOME_REASON_TAG_LIMIT);
+}
+
+function buildHomeReasonTags(
+  entry: LeaderboardEntryView,
+  aggregates: Map<string, HomeReasonAggregate[]> | null,
+  kolId: string | null | undefined,
+) {
+  const communityTags = kolId ? aggregates?.get(kolId) ?? [] : [];
+
+  if (communityTags.length > 0) {
+    return communityTags
+      .slice(0, HOME_REASON_TAG_LIMIT)
+      .map((tag) => ({ label: tag.label, tone: tag.tone }));
+  }
+
+  return buildFallbackHomeReasonTags(entry);
+}
+
+function buildHomeReasonTagMap(
+  voteRows: Array<Pick<KolVoteRow, "kol_id" | "tag" | "created_at" | "updated_at">>,
+  commentRows: Array<Pick<KolCommentRow, "kol_id" | "tag" | "created_at">>,
+) {
+  const aggregates = new Map<string, Map<string, HomeReasonAggregate>>();
+
+  function registerTag(kolId: string, tag: string | null | undefined, source: HomeReasonSource, timestamp: string) {
+    const normalized = normalizeHomeReasonTag(tag, source);
+
+    if (!normalized) {
+      return;
+    }
+
+    const latestAt = new Date(timestamp).getTime();
+    const bucket = aggregates.get(kolId) ?? new Map<string, HomeReasonAggregate>();
+    const existing = bucket.get(normalized.label);
+
+    bucket.set(normalized.label, {
+      label: normalized.label,
+      tone: normalized.tone,
+      count: (existing?.count ?? 0) + 1,
+      latestAt: Math.max(existing?.latestAt ?? 0, latestAt),
+    });
+    aggregates.set(kolId, bucket);
+  }
+
+  voteRows.forEach((row) => {
+    registerTag(row.kol_id, row.tag, "vote", row.updated_at ?? row.created_at);
+  });
+
+  commentRows.forEach((row) => {
+    registerTag(row.kol_id, row.tag, "comment", row.created_at);
+  });
+
+  return new Map(
+    [...aggregates.entries()].map(([kolId, tagMap]) => [
+      kolId,
+      [...tagMap.values()].sort((left, right) => {
+        if (right.count !== left.count) return right.count - left.count;
+        if (right.latestAt !== left.latestAt) return right.latestAt - left.latestAt;
+        return left.label.localeCompare(right.label);
+      }),
+    ]),
+  );
+}
+
+function mapHomeCard(
+  entry: LeaderboardEntryView,
+  index: number,
+  reasonTags: HomeCardView["reasonTags"],
+): HomeCardView {
   return {
     slug: entry.slug,
     handle: entry.handle,
@@ -366,6 +517,7 @@ function mapHomeCard(entry: LeaderboardEntryView, index: number): HomeCardView {
     bio: entry.subtitle,
     monthlyChange: entry.trendLabel,
     globalRank: `Global Rank #${index + 1}`,
+    reasonTags,
     stats: [
       { label: "Total Mentions", value: entry.flowLabel.replace(" SIGNALS", "") },
       { label: "Verdict Score", value: `${entry.trustScore}`, tone: "primary" },
@@ -376,7 +528,52 @@ function mapHomeCard(entry: LeaderboardEntryView, index: number): HomeCardView {
 
 export async function getHomeCards() {
   const snapshot = await getLeaderboardSnapshot("trending");
-  return snapshot.entries.slice(0, 500).map(mapHomeCard);
+  const entries = snapshot.entries.slice(0, 500);
+
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const client = createInsForgeServerClient();
+  const slugs = entries.map((entry) => entry.slug);
+  const kolLookup = await client.database.from("kols").select("id, slug").in("slug", slugs);
+  const slugToKolId = new Map(
+    (((kolLookup.error ? [] : (kolLookup.data as Array<Pick<KolRow, "id" | "slug">>)) ?? [])).map((row) => [row.slug, row.id]),
+  );
+  const kolIds = [...new Set(slugToKolId.values())];
+
+  let reasonTagAggregates: Map<string, HomeReasonAggregate[]> | null = null;
+
+  if (kolIds.length > 0) {
+    const [voteTagsResponse, commentTagsResponse] = await Promise.all([
+      client.database
+        .from("kol_votes")
+        .select("kol_id, tag, created_at, updated_at")
+        .in("kol_id", kolIds)
+        .not("tag", "is", null),
+      client.database
+        .from("kol_comments")
+        .select("kol_id, tag, created_at")
+        .in("kol_id", kolIds)
+        .eq("moderation_status", "published")
+        .not("tag", "is", null),
+    ]);
+
+    if (!voteTagsResponse.error && !commentTagsResponse.error) {
+      reasonTagAggregates = buildHomeReasonTagMap(
+        (voteTagsResponse.data as Array<Pick<KolVoteRow, "kol_id" | "tag" | "created_at" | "updated_at">>) ?? [],
+        (commentTagsResponse.data as Array<Pick<KolCommentRow, "kol_id" | "tag" | "created_at">>) ?? [],
+      );
+    }
+  }
+
+  return entries.map((entry, index) =>
+    mapHomeCard(
+      entry,
+      index,
+      buildHomeReasonTags(entry, reasonTagAggregates, slugToKolId.get(entry.slug)),
+    ),
+  );
 }
 
 export async function createKol(input: CreateKolInput, profileId: string) {

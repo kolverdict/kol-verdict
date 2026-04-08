@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { DesktopShell, MobileShell } from "@/components/app-shell";
 import { useWalletSession } from "@/components/wallet-session-provider";
 import { Icon } from "@/components/ui";
@@ -27,6 +28,32 @@ type SubmissionState =
   | { kind: "loading" }
   | { kind: "success"; message: string }
   | { kind: "error"; message: string };
+
+type AvatarLookupStatus = "idle" | "loading" | "ready" | "error";
+
+const AVATAR_PREVIEW_DEBOUNCE_MS = 320;
+
+function normalizeXUsername(value: string) {
+  const trimmed = value.trim().replace(/^@+/, "");
+  if (!/^[A-Za-z0-9_]{1,15}$/.test(trimmed)) {
+    return "";
+  }
+
+  return trimmed;
+}
+
+function buildAvatarPreviewUrl(username: string) {
+  return `https://unavatar.io/x/${username}`;
+}
+
+function getInitials(value: string) {
+  const cleaned = value.trim().replace(/^@+/, "");
+  if (!cleaned) {
+    return "??";
+  }
+
+  return cleaned.slice(0, 2).toUpperCase();
+}
 
 function Field({
   id,
@@ -81,14 +108,19 @@ function Field({
 function RegistryPreview({
   username,
   wallet,
+  avatarUrl,
+  avatarStatus,
   compact = false,
 }: {
   username: string;
   wallet: string;
+  avatarUrl: string | null;
+  avatarStatus: AvatarLookupStatus;
   compact?: boolean;
 }) {
   const hasUsername = username.trim().length > 0;
   const normalizedWallet = wallet.trim();
+  const initials = getInitials(username);
 
   return (
     <div
@@ -100,8 +132,28 @@ function RegistryPreview({
       <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-secondary/5 blur-[80px]" />
 
       <div className="relative flex items-center gap-6">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-secondary/20 bg-surface-container-highest">
-          <Icon name="person" className="text-4xl text-zinc-600" />
+        <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-secondary/20 bg-surface-container-highest">
+          {avatarUrl && avatarStatus === "ready" ? (
+            <Image
+              src={avatarUrl}
+              alt={`@${username} avatar preview`}
+              fill
+              sizes="80px"
+              className="object-cover"
+            />
+          ) : hasUsername ? (
+            <span className="font-display text-[1.4rem] font-black uppercase tracking-[-0.08em] text-white">
+              {initials}
+            </span>
+          ) : (
+            <Icon name="person" className="text-4xl text-zinc-600" />
+          )}
+
+          {avatarStatus === "loading" ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/38 backdrop-blur-[2px]">
+              <span className="h-2.5 w-2.5 rounded-full bg-primary/80 motion-safe:animate-pulse" />
+            </div>
+          ) : null}
         </div>
 
         <div className="min-w-0 flex-1 space-y-1">
@@ -148,12 +200,72 @@ function AddKolContent({ compact = false }: { compact?: boolean }) {
   const [username, setUsername] = useState("");
   const [wallet, setWallet] = useState("");
   const [submission, setSubmission] = useState<SubmissionState>({ kind: "idle" });
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [avatarLookupStatus, setAvatarLookupStatus] = useState<AvatarLookupStatus>("idle");
+  const avatarRequestKeyRef = useRef(0);
   const isSubmitting = submission.kind === "loading";
+  const normalizedUsername = normalizeXUsername(username);
+
+  function handleUsernameChange(value: string) {
+    setUsername(value);
+
+    const nextNormalizedUsername = normalizeXUsername(value);
+    avatarRequestKeyRef.current += 1;
+
+    if (!nextNormalizedUsername) {
+      setAvatarPreviewUrl(null);
+      setAvatarLookupStatus("idle");
+    } else {
+      setAvatarPreviewUrl(null);
+      setAvatarLookupStatus("loading");
+    }
+
+    if (submission.kind !== "idle") {
+      setSubmission({ kind: "idle" });
+    }
+  }
+
+  useEffect(() => {
+    if (!normalizedUsername) {
+      return;
+    }
+
+    const requestKey = avatarRequestKeyRef.current;
+
+    const timeoutId = window.setTimeout(() => {
+      const previewUrl = buildAvatarPreviewUrl(normalizedUsername);
+      const image = new window.Image();
+
+      image.onload = () => {
+        if (avatarRequestKeyRef.current !== requestKey) {
+          return;
+        }
+
+        setAvatarPreviewUrl(previewUrl);
+        setAvatarLookupStatus("ready");
+      };
+
+      image.onerror = () => {
+        if (avatarRequestKeyRef.current !== requestKey) {
+          return;
+        }
+
+        setAvatarPreviewUrl(null);
+        setAvatarLookupStatus("error");
+      };
+
+      image.src = previewUrl;
+    }, AVATAR_PREVIEW_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [normalizedUsername]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const trimmedUsername = username.trim().replace(/^@+/, "");
+    const trimmedUsername = normalizeXUsername(username);
     const trimmedWallet = wallet.trim();
 
     if (!trimmedUsername) {
@@ -182,6 +294,7 @@ function AddKolContent({ compact = false }: { compact?: boolean }) {
       const payload: CreateKolRequest = {
         xUsername: trimmedUsername,
         walletAddress: trimmedWallet ? trimmedWallet : null,
+        avatarUrl: avatarLookupStatus === "ready" ? avatarPreviewUrl : null,
       };
 
       const response = await fetch("/api/kols", {
@@ -237,12 +350,7 @@ function AddKolContent({ compact = false }: { compact?: boolean }) {
             label="X (Twitter) Username"
             placeholder="elonmusk"
             value={username}
-            onChange={(value) => {
-              setUsername(value);
-              if (submission.kind !== "idle") {
-                setSubmission({ kind: "idle" });
-              }
-            }}
+            onChange={handleUsernameChange}
             accent="secondary"
             prefix="@"
             displayFont
@@ -268,8 +376,18 @@ function AddKolContent({ compact = false }: { compact?: boolean }) {
           <div className="mb-4 ml-0.5 font-display text-[10px] font-bold uppercase tracking-widest text-zinc-500">
             Registry Preview
           </div>
-          <RegistryPreview username={username} wallet={wallet} compact={compact} />
+          <RegistryPreview
+            username={normalizedUsername}
+            wallet={wallet}
+            avatarUrl={avatarPreviewUrl}
+            avatarStatus={avatarLookupStatus}
+            compact={compact}
+          />
         </div>
+
+        <p className="mt-5 text-center text-sm text-on-surface-variant">
+          This profile will be publicly verified by the community
+        </p>
 
         <div className="pt-8">
           <button

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { DesktopShell, MobileShell } from "@/components/app-shell";
 import { Icon, ImageCard, Pill } from "@/components/ui";
@@ -121,6 +121,44 @@ function getInitials(name: string) {
     .join("");
 }
 
+function reasonTagToneClasses(tone: HomeCardView["reasonTags"][number]["tone"]) {
+  if (tone === "primary") {
+    return "border-primary/18 bg-primary/10 text-primary";
+  }
+
+  if (tone === "secondary") {
+    return "border-secondary/18 bg-secondary/10 text-secondary";
+  }
+
+  if (tone === "tertiary") {
+    return "border-tertiary/18 bg-tertiary/10 text-tertiary";
+  }
+
+  return "border-white/10 bg-white/6 text-on-surface-variant";
+}
+
+function useFinePointer() {
+  const [supportsFinePointer, setSupportsFinePointer] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const syncPointerState = () => setSupportsFinePointer(mediaQuery.matches);
+
+    syncPointerState();
+    mediaQuery.addEventListener("change", syncPointerState);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncPointerState);
+    };
+  }, []);
+
+  return supportsFinePointer;
+}
+
 function QueueImagePreload({ card }: { card: HomeCardView | null }) {
   if (!card?.image) {
     return null;
@@ -179,6 +217,7 @@ function VerdictActionButton({
   tone,
   disabled,
   active,
+  successBurst,
   layout,
   onClick,
 }: {
@@ -187,10 +226,13 @@ function VerdictActionButton({
   tone: "primary" | "tertiary";
   disabled: boolean;
   active: boolean;
+  successBurst: boolean;
   layout: VerdictCardLayout;
   onClick: () => void;
 }) {
   const isPrimary = tone === "primary";
+  const [isPressed, setIsPressed] = useState(false);
+  const shouldIdleBounce = !disabled && !active && !successBurst && !isPressed;
   const sizeClasses =
     layout === "desktop"
       ? "h-[4.9rem] rounded-[1.55rem] text-[0.78rem] tracking-[0.22em]"
@@ -201,19 +243,64 @@ function VerdictActionButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      whileTap={disabled ? undefined : { scale: 0.97 }}
-      animate={{
-        scale: active ? 0.985 : 1,
-      }}
+      onTapStart={() => setIsPressed(true)}
+      onTap={() => setIsPressed(false)}
+      onTapCancel={() => setIsPressed(false)}
+      whileTap={disabled ? undefined : { scale: 0.95 }}
+      animate={
+        shouldIdleBounce
+          ? {
+              y: [0, -1.5, 0],
+              scale: [1, 1.008, 1],
+            }
+          : {
+              y: 0,
+              scale: active ? 0.985 : 1,
+            }
+      }
+      transition={
+        shouldIdleBounce
+          ? {
+              duration: isPrimary ? 2.85 : 2.5,
+              ease: [0.4, 0, 0.2, 1],
+              repeat: Number.POSITIVE_INFINITY,
+              repeatDelay: isPrimary ? 0.9 : 1.1,
+              delay: isPrimary ? 0.16 : 0,
+            }
+          : {
+              type: "spring",
+              stiffness: 340,
+              damping: 24,
+              mass: 0.62,
+            }
+      }
       className={cx(
-        "relative flex w-full items-center justify-center gap-2 overflow-hidden border font-display font-black uppercase text-center transition-transform duration-200 disabled:cursor-wait disabled:opacity-70",
+        "relative flex w-full items-center justify-center gap-2 overflow-hidden border font-display font-black uppercase text-center transition-[transform,box-shadow,opacity,border-color] duration-300 focus-visible:outline-none disabled:cursor-wait disabled:opacity-70",
         sizeClasses,
         isPrimary
-          ? "liquid-neon-primary primary-glow border-primary/25 text-on-primary"
-          : "border-tertiary/26 bg-[linear-gradient(180deg,rgba(255,77,109,0.18),rgba(255,77,109,0.08))] text-tertiary shadow-[0_18px_36px_rgba(255,77,109,0.12)]",
+          ? "liquid-neon-primary primary-glow border-primary/25 text-on-primary hover:shadow-[0_0_46px_rgba(156,255,147,0.32)] focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:shadow-[0_0_46px_rgba(156,255,147,0.32)]"
+          : "border-tertiary/26 bg-[linear-gradient(180deg,rgba(255,77,109,0.18),rgba(255,77,109,0.08))] text-tertiary shadow-[0_18px_36px_rgba(255,77,109,0.12)] hover:shadow-[0_0_44px_rgba(255,77,109,0.24)] focus-visible:ring-2 focus-visible:ring-tertiary/35 focus-visible:shadow-[0_0_44px_rgba(255,77,109,0.24)]",
         active && (isPrimary ? "shadow-[0_0_36px_rgba(156,255,147,0.3)]" : "shadow-[0_0_36px_rgba(255,77,109,0.22)]"),
       )}
     >
+      <AnimatePresence>
+        {successBurst ? (
+          <motion.span
+            key="success-burst"
+            aria-hidden="true"
+            initial={{ opacity: 0, scale: 0.76 }}
+            animate={{ opacity: [0.08, 0.6, 0], scale: [0.82, 1.18, 1.56] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
+            className={cx(
+              "pointer-events-none absolute inset-[-20%] rounded-[inherit]",
+              isPrimary
+                ? "bg-[radial-gradient(circle,rgba(156,255,147,0.42)_0%,rgba(156,255,147,0.18)_42%,transparent_74%)]"
+                : "bg-[radial-gradient(circle,rgba(255,77,109,0.42)_0%,rgba(255,77,109,0.18)_42%,transparent_74%)]",
+            )}
+          />
+        ) : null}
+      </AnimatePresence>
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_60%)]" />
       <Icon
         name={icon}
@@ -225,12 +312,67 @@ function VerdictActionButton({
   );
 }
 
+function VerdictGestureHint({
+  layout,
+  subdued = false,
+}: {
+  layout: VerdictCardLayout;
+  subdued?: boolean;
+}) {
+  const isDesktop = layout === "desktop";
+
+  return (
+    <motion.div
+      initial={false}
+      animate={{ opacity: subdued ? 0.34 : 0.72 }}
+      transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
+      className={cx(
+        "flex items-center justify-center gap-2.5 text-center",
+        isDesktop ? "px-4" : "px-2",
+      )}
+    >
+      <motion.span
+        aria-hidden="true"
+        animate={{ x: [0, -4, 0], opacity: [0.26, 0.62, 0.26] }}
+        transition={{ duration: 1.9, ease: [0.4, 0, 0.2, 1], repeat: Number.POSITIVE_INFINITY }}
+        className="flex items-center"
+      >
+        <Icon name="chevron_left" className={cx("text-on-surface-variant/80", isDesktop ? "text-[1rem]" : "text-[0.9rem]")} />
+      </motion.span>
+
+      <span
+        className={cx(
+          "font-display font-bold uppercase tracking-[0.18em] text-on-surface-variant/78",
+          isDesktop ? "text-[0.56rem]" : "text-[0.5rem] leading-5",
+        )}
+      >
+        Swipe right to endorse • Swipe left to reject
+      </span>
+
+      <motion.span
+        aria-hidden="true"
+        animate={{ x: [0, 4, 0], opacity: [0.26, 0.62, 0.26] }}
+        transition={{
+          duration: 1.9,
+          ease: [0.4, 0, 0.2, 1],
+          repeat: Number.POSITIVE_INFINITY,
+          delay: 0.18,
+        }}
+        className="flex items-center"
+      >
+        <Icon name="chevron_right" className={cx("text-on-surface-variant/80", isDesktop ? "text-[1rem]" : "text-[0.9rem]")} />
+      </motion.span>
+    </motion.div>
+  );
+}
+
 function VerdictCard({
   card,
   layout,
   direction,
   pendingDirection,
   voteLocked,
+  enableInteractiveMotion,
   feedback,
   onReject,
   onEndorse,
@@ -240,12 +382,20 @@ function VerdictCard({
   direction: SwipeDirection | null;
   pendingDirection: SwipeDirection | null;
   voteLocked: boolean;
+  enableInteractiveMotion: boolean;
   feedback: { text: string; tone: FeedbackTone } | null;
   onReject: () => void;
   onEndorse: () => void;
 }) {
   const isDesktop = layout === "desktop";
+  const prefersReducedMotion = useReducedMotion();
+  const supportsFinePointer = useFinePointer();
+  const tiltX = useMotionValue(0);
+  const tiltY = useMotionValue(0);
+  const rotateX = useSpring(tiltX, { stiffness: 220, damping: 26, mass: 0.5 });
+  const rotateY = useSpring(tiltY, { stiffness: 220, damping: 26, mass: 0.5 });
   const initials = getInitials(card.name);
+  const canTilt = isDesktop && enableInteractiveMotion && supportsFinePointer && !prefersReducedMotion;
   const imageSize = isDesktop ? "h-52 w-52 rounded-[2.15rem]" : "h-40 w-40 rounded-[1.75rem]";
   const containerClasses = isDesktop
     ? "mx-auto w-full max-w-[48rem] rounded-[2.55rem] border border-white/6 px-10 pb-7 pt-6"
@@ -253,15 +403,51 @@ function VerdictCard({
   const cardHeight = isDesktop ? "min-h-[38rem]" : "min-h-[calc(100vh-16rem)]";
   const feedbackText = feedback?.text ?? "";
 
+  useEffect(() => {
+    if (!canTilt) {
+      tiltX.set(0);
+      tiltY.set(0);
+    }
+  }, [canTilt, tiltX, tiltY]);
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (!canTilt) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const normalizedX = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const normalizedY = (event.clientY - bounds.top) / bounds.height - 0.5;
+
+    tiltY.set(clamp(normalizedX * 10, -5, 5));
+    tiltX.set(clamp(-normalizedY * 6, -3, 3));
+  }
+
+  function resetTilt() {
+    tiltX.set(0);
+    tiltY.set(0);
+  }
+
   return (
-    <div
+    <motion.div
+      onPointerMove={handlePointerMove}
+      onPointerLeave={resetTilt}
+      onPointerCancel={resetTilt}
+      style={canTilt ? { rotateX, rotateY, transformPerspective: 1600 } : undefined}
       className={cx(
-        "relative overflow-hidden bg-surface-container-high shadow-[0_36px_80px_rgba(0,0,0,0.54)]",
+        "group relative overflow-hidden bg-surface-container-high shadow-[0_36px_80px_rgba(0,0,0,0.54)] transition-[box-shadow,transform,border-color] duration-300 will-change-transform [transform-style:preserve-3d]",
         containerClasses,
         cardHeight,
+        canTilt ? "hover:shadow-[0_44px_96px_rgba(0,0,0,0.58),0_0_58px_rgba(0,207,252,0.08)]" : "",
       )}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(0,207,252,0.12),transparent_28%),radial-gradient(circle_at_50%_74%,rgba(156,255,147,0.09),transparent_34%),linear-gradient(180deg,rgba(21,26,30,0.98),rgba(9,11,13,1))]" />
+      <div
+        className={cx(
+          "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.12),transparent_42%),radial-gradient(circle_at_50%_54%,rgba(0,207,252,0.16),transparent_54%)] opacity-0 transition-opacity duration-300",
+          canTilt ? "group-hover:opacity-100" : "",
+        )}
+      />
       <motion.div
         aria-hidden="true"
         initial={false}
@@ -359,6 +545,30 @@ function VerdictCard({
             </div>
           </div>
 
+          {card.reasonTags.length > 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.24, ease: [0.2, 0, 0, 1] }}
+              className="mt-3 flex flex-wrap items-center justify-center gap-2"
+            >
+              {card.reasonTags.slice(0, 2).map((tag, index) => (
+                <motion.span
+                  key={`${card.slug}-${tag.label}`}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: [0.2, 0, 0, 1], delay: index * 0.05 }}
+                  className={cx(
+                    "inline-flex items-center rounded-full border px-3 py-1.5 font-display text-[0.64rem] font-bold tracking-[0.04em] shadow-[0_12px_26px_rgba(0,0,0,0.18)]",
+                    reasonTagToneClasses(tag.tone),
+                  )}
+                >
+                  {tag.label}
+                </motion.span>
+              ))}
+            </motion.div>
+          ) : null}
+
           <p
             className={cx(
               "mx-auto mt-3 max-w-[30rem] text-on-surface-variant",
@@ -390,11 +600,22 @@ function VerdictCard({
         </div>
 
         <div className="mt-4">
+          <div
+            aria-live="polite"
+            className={cx(
+              "min-h-[1rem] pb-3 text-center font-display text-[0.56rem] font-bold uppercase tracking-[0.22em]",
+              feedbackColorClass(feedback?.tone),
+            )}
+          >
+            {feedbackText}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <VerdictActionButton
               label="Reject"
               icon="close"
               tone="tertiary"
+              successBurst={direction === "scam"}
               layout={layout}
               disabled={voteLocked}
               active={pendingDirection === "scam"}
@@ -404,25 +625,16 @@ function VerdictCard({
               label="Endorse"
               icon="favorite"
               tone="primary"
+              successBurst={direction === "trust"}
               layout={layout}
               disabled={voteLocked}
               active={pendingDirection === "trust"}
               onClick={onEndorse}
             />
           </div>
-
-          <div
-            aria-live="polite"
-            className={cx(
-              "mt-3 min-h-[1rem] text-center font-display text-[0.56rem] font-bold uppercase tracking-[0.22em]",
-              feedbackColorClass(feedback?.tone),
-            )}
-          >
-            {feedbackText}
-          </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -443,6 +655,10 @@ function VerdictLoadingState({ layout }: { layout: VerdictCardLayout }) {
         <div className="mt-5 h-4 w-28 rounded-full bg-white/10 motion-safe:animate-pulse" />
         <div className={cx("mt-4 h-12 rounded-full bg-white/10 motion-safe:animate-pulse", isDesktop ? "w-80" : "w-56")} />
         <div className={cx("mt-4 h-24 rounded-[1.35rem] border border-white/6 bg-black/20 px-6 py-4 motion-safe:animate-pulse", isDesktop ? "w-52" : "w-44")} />
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <div className="h-7 w-24 rounded-full bg-white/8 motion-safe:animate-pulse" />
+          <div className="h-7 w-20 rounded-full bg-white/8 motion-safe:animate-pulse" />
+        </div>
         <div className={cx("mt-4 h-[4.5rem] rounded-[1.55rem] border border-white/6 bg-black/16 motion-safe:animate-pulse", isDesktop ? "w-[34rem]" : "w-full")} />
         <div className="mt-4 grid w-full grid-cols-2 gap-3">
           <div className={cx("rounded-[1.35rem] bg-white/8 motion-safe:animate-pulse", isDesktop ? "h-[4.9rem]" : "h-[4.35rem]")} />
@@ -573,6 +789,7 @@ function DesktopVerdictSurface({
               direction={direction}
               pendingDirection={pendingVote?.slug === activeCard.slug ? pendingVote.direction : null}
               voteLocked={voteLocked}
+              enableInteractiveMotion={!voteLocked && !isTransitioning}
               feedback={feedback}
               onReject={() => void onVote(activeCard, "scam")}
               onEndorse={() => void onVote(activeCard, "trust")}
@@ -580,6 +797,8 @@ function DesktopVerdictSurface({
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      <VerdictGestureHint layout="desktop" subdued={voteLocked || isTransitioning} />
 
       {!session ? null : <QueueImagePreload card={nextCard} />}
     </div>
@@ -647,6 +866,7 @@ function MobileVerdictSurface({
               direction={direction}
               pendingDirection={pendingVote?.slug === activeCard.slug ? pendingVote.direction : null}
               voteLocked={voteLocked}
+              enableInteractiveMotion={false}
               feedback={feedback}
               onReject={() => void onVote(activeCard, "scam")}
               onEndorse={() => void onVote(activeCard, "trust")}
@@ -654,6 +874,8 @@ function MobileVerdictSurface({
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      <VerdictGestureHint layout="mobile" subdued={voteLocked || isTransitioning} />
 
       {!session ? null : <QueueImagePreload card={nextCard} />}
     </div>

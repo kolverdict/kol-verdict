@@ -106,22 +106,6 @@ function feedbackColorClass(tone?: FeedbackTone | null) {
   return "text-on-surface-variant/50";
 }
 
-function getInitials(name: string) {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "KV";
-  }
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 function reasonTagToneClasses(tone: HomeCardView["reasonTags"][number]["tone"]) {
   if (tone === "primary") {
     return "border-primary/18 bg-primary/10 text-primary";
@@ -402,7 +386,6 @@ function VerdictCard({
   const tiltY = useMotionValue(0);
   const rotateX = useSpring(tiltX, { stiffness: 220, damping: 26, mass: 0.5 });
   const rotateY = useSpring(tiltY, { stiffness: 220, damping: 26, mass: 0.5 });
-  const initials = getInitials(card.name);
   const canTilt = isDesktop && enableInteractiveMotion && supportsFinePointer && !prefersReducedMotion;
   const imageSize = isDesktop ? "h-44 w-44 rounded-3xl" : "h-20 w-20 rounded-xl";
   const containerClasses = isDesktop
@@ -481,19 +464,13 @@ function VerdictCard({
                 <div className={cx("relative overflow-hidden border border-white/10 bg-surface-container-highest shadow-[0_16px_34px_rgba(0,0,0,0.3)]", imageSize)}>
                   <ImageCard
                     src={card.image}
-                    alt={card.name}
+                    alt={`${card.name} avatar`}
                     priority
                     sizes="220px"
                     className="h-full w-full"
                     imageClassName="object-cover object-center grayscale-[12%] contrast-110"
+                    fallbackSrc="/default-avatar.svg"
                   />
-                  {!card.image ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="font-display text-[3.8rem] font-bold uppercase tracking-[-0.08em] text-white/88">
-                        {initials}
-                      </span>
-                    </div>
-                  ) : null}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/52 via-transparent to-transparent" />
                 </div>
               </div>
@@ -657,24 +634,13 @@ function VerdictCard({
           <div className={cx("relative overflow-hidden border border-white/8 bg-surface-container-highest shadow-[0_18px_40px_rgba(0,0,0,0.32)]", imageSize)}>
             <ImageCard
               src={card.image}
-              alt={card.name}
+              alt={`${card.name} avatar`}
               priority
               sizes={isDesktop ? "320px" : "240px"}
               className="h-full w-full"
               imageClassName="object-cover object-center grayscale-[10%] contrast-110"
+              fallbackSrc="/default-avatar.svg"
             />
-            {!card.image ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span
-                  className={cx(
-                    "font-display font-bold uppercase tracking-[-0.08em] text-white/88",
-                    isDesktop ? "text-[4.2rem]" : "text-[2.4rem]",
-                  )}
-                >
-                  {initials}
-                </span>
-              </div>
-            ) : null}
             <div className="absolute inset-0 bg-gradient-to-t from-black/48 via-transparent to-transparent" />
           </div>
         </div>

@@ -78,6 +78,14 @@ export interface HomeResponse {
 export interface KolProfileResponse {
   profile: KolProfileView;
 }
+export interface KolSearchMatch {
+  slug: string;
+}
+
+export interface KolSearchResponse {
+  match: KolSearchMatch | null;
+}
+
 
 export interface VoteRequest {
   direction: VoteDirection;

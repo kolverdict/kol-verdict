@@ -45,6 +45,7 @@ type HomeReasonAggregate = {
 };
 
 const HOME_REASON_TAG_LIMIT = 2;
+const KOL_SEARCH_LIMIT = 10;
 
 function toArray<T>(value: T | T[] | null | undefined) {
   if (!value) return [] as T[];
@@ -413,6 +414,57 @@ function dedupeReasonTags(tags: HomeCardView["reasonTags"]) {
 
   return deduped;
 }
+type KolSearchRow = Pick<KolRow, "slug" | "x_username" | "display_name">;
+
+function normalizeSearchValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function compactSearchValue(value: string) {
+  return normalizeSearchValue(value).replace(/[^a-z0-9]+/g, "");
+}
+
+function buildKolSearchQuery(query: string) {
+  const trimmed = query.trim();
+  const normalized = normalizeSearchValue(trimmed);
+  const withoutHandlePrefix = normalized.replace(/^@+/, "");
+  const tokens = normalized.split(/[^a-z0-9]+/).filter(Boolean);
+
+  return {
+    raw: trimmed,
+    normalized,
+    compact: compactSearchValue(trimmed),
+    slug: createSlug(trimmed),
+    handle: withoutHandlePrefix,
+    pattern: `%${(tokens.length > 0 ? tokens : [withoutHandlePrefix || normalized]).join("%")}%`,
+  };
+}
+
+function scoreKolSearchRow(row: KolSearchRow, query: ReturnType<typeof buildKolSearchQuery>) {
+  const slug = normalizeSearchValue(row.slug);
+  const xUsername = normalizeSearchValue(row.x_username);
+  const displayName = normalizeSearchValue(row.display_name ?? row.x_username);
+  const compactSlug = compactSearchValue(row.slug);
+  const compactUsername = compactSearchValue(row.x_username);
+  const compactDisplayName = compactSearchValue(row.display_name ?? row.x_username);
+
+  if (slug === query.slug) return 120;
+  if (xUsername === query.handle) return 118;
+  if (displayName === query.normalized) return 116;
+  if (compactSlug === query.compact) return 112;
+  if (compactUsername === query.compact) return 110;
+  if (compactDisplayName === query.compact) return 108;
+  if (slug.startsWith(query.slug)) return 96;
+  if (xUsername.startsWith(query.handle)) return 94;
+  if (displayName.startsWith(query.normalized)) return 92;
+  if (slug.includes(query.slug)) return 84;
+  if (xUsername.includes(query.handle)) return 82;
+  if (displayName.includes(query.normalized)) return 80;
+  if (compactDisplayName.includes(query.compact)) return 72;
+  if (compactUsername.includes(query.compact)) return 70;
+  return 0;
+}
+
 
 function buildFallbackHomeReasonTags(entry: LeaderboardEntryView): HomeCardView["reasonTags"] {
   const fallbackTags: HomeCardView["reasonTags"] = [];
@@ -575,6 +627,42 @@ export async function getHomeCards() {
     ),
   );
 }
+export async function searchKol(query: string) {
+  const search = buildKolSearchQuery(query);
+  const client = createInsForgeServerClient();
+  const response = await client.database
+    .from("kols")
+    .select("slug, x_username, display_name")
+    .eq("status", "active")
+    .or(
+      [
+        `slug.ilike.%${search.slug}%`,
+        `x_username.ilike.%${search.handle}%`,
+        `slug.ilike.${search.pattern}`,
+        `x_username.ilike.${search.pattern}`,
+        `display_name.ilike.${search.pattern}`,
+      ].join(","),
+    )
+    .limit(KOL_SEARCH_LIMIT);
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  const matches = ((response.data as KolSearchRow[] | null) ?? [])
+    .map((row) => ({
+      row,
+      score: scoreKolSearchRow(row, search),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score;
+      return left.row.slug.localeCompare(right.row.slug);
+    });
+
+  return matches[0]?.row ?? null;
+}
+
 
 export async function createKol(input: CreateKolInput, profileId: string) {
   const xUsername = normalizeHandle(input.xUsername);

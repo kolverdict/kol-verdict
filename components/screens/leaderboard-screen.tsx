@@ -27,9 +27,18 @@ const skeletonStats: StatCardView[] = [
   { label: "Total Scams Flagged", value: "--", meta: "Community", tone: "tertiary" },
   { label: "Reputation Minted", value: "--", meta: "Profiles", tone: "neutral" },
 ];
+const LEADERBOARD_PAGE_SIZE = 5;
+const DESKTOP_PAGE_BUTTON_COUNT = 3;
 
 function rankLabel(index: number) {
   return String(index + 1).padStart(2, "0");
+}
+
+function getPageWindowStart(currentPage: number, totalPages: number) {
+  return Math.min(
+    Math.max(currentPage - 1, 1),
+    Math.max(totalPages - DESKTOP_PAGE_BUTTON_COUNT + 1, 1),
+  );
 }
 
 function trendArrowIcon(tab: LeaderboardTab) {
@@ -307,14 +316,32 @@ export function LeaderboardScreen() {
   const [loadingTab, setLoadingTab] = useState<LeaderboardTab | null>(tabMap.Trusted);
   const [errorByTab, setErrorByTab] = useState<Partial<Record<LeaderboardTab, string>>>({});
   const [reloadNonce, setReloadNonce] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const backendTab = tabMap[activeTab];
   const snapshot = snapshots[backendTab];
   const isLoading = loadingTab === backendTab;
   const error = errorByTab[backendTab];
   const mobileEntries = snapshot?.entries.slice(0, 4) ?? [];
-  const desktopEntries = snapshot?.entries.slice(0, 5) ?? [];
+  const totalEntries = snapshot?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalEntries / LEADERBOARD_PAGE_SIZE));
+  const pageStart = (currentPage - 1) * LEADERBOARD_PAGE_SIZE;
+  const desktopEntries = snapshot?.entries.slice(pageStart, pageStart + LEADERBOARD_PAGE_SIZE) ?? [];
+  const showingStart = desktopEntries.length > 0 ? pageStart + 1 : 0;
+  const showingEnd = pageStart + desktopEntries.length;
+  const canGoPrevious = currentPage > 1;
+  const canGoNext = currentPage < totalPages;
+  const pageWindowStart = getPageWindowStart(currentPage, totalPages);
   const stats = snapshot?.stats ?? skeletonStats;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [backendTab]);
+
+  useEffect(() => {
+    setCurrentPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
+
   useEffect(() => {
     if (snapshots[backendTab]) {
       return;
@@ -472,7 +499,7 @@ export function LeaderboardScreen() {
               {isLoading && !snapshot ? Array.from({ length: 5 }, (_, index) => <DesktopLeaderboardSkeleton key={index} rank={rankLabel(index)} />) : null}
 
               {!isLoading && !error && desktopEntries.map((entry, index) => (
-                <DesktopLeaderboardRow key={entry.slug} entry={entry} rank={rankLabel(index)} tab={backendTab} />
+                <DesktopLeaderboardRow key={entry.slug} entry={entry} rank={rankLabel(pageStart + index)} tab={backendTab} />
               ))}
 
               {!isLoading && (error || desktopEntries.length === 0) ? (
@@ -501,31 +528,52 @@ export function LeaderboardScreen() {
 
             <div className="flex items-center justify-between border-t border-white/8 bg-surface-container-high/25 px-6 py-4">
               <p className="text-sm text-on-surface-variant">
-                Showing <span className="text-white">1 - {desktopEntries.length}</span> of {snapshot?.total ?? 0} ranked analysts
+                Showing <span className="text-white">{showingStart} - {showingEnd}</span> of {totalEntries} ranked analysts
               </p>
               <div className="flex items-center gap-2">
-                {["chevron_left", "1", "2", "3", "chevron_right"].map((item) =>
-                  item.includes("chevron") ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (canGoPrevious) {
+                      setCurrentPage((current) => current - 1);
+                    }
+                  }}
+                  className="kv-focus-ring flex h-10 w-10 items-center justify-center rounded-xl border border-white/8 text-on-surface-variant transition-colors duration-200 hover:bg-white/5"
+                >
+                  <Icon name="chevron_left" className="text-[1rem]" />
+                </button>
+                {Array.from({ length: DESKTOP_PAGE_BUTTON_COUNT }, (_, slotIndex) => {
+                  const pageNumber = pageWindowStart + slotIndex;
+
+                  if (pageNumber > totalPages) {
+                    return <span key={`page-gap-${slotIndex}`} className="h-10 w-10" aria-hidden="true" />;
+                  }
+
+                  return (
                     <button
-                      key={item}
+                      key={pageNumber}
                       type="button"
-                      className="kv-focus-ring flex h-10 w-10 items-center justify-center rounded-xl border border-white/8 text-on-surface-variant transition-colors duration-200 hover:bg-white/5"
-                    >
-                      <Icon name={item} className="text-[1rem]" />
-                    </button>
-                  ) : (
-                    <button
-                      key={item}
-                      type="button"
+                      onClick={() => setCurrentPage(pageNumber)}
                       className={cx(
                         "kv-focus-ring h-10 w-10 rounded-xl border font-label text-[0.62rem] font-semibold uppercase tracking-[0.14em]",
-                        item === "1" ? "border-primary/50 text-primary" : "border-white/5 text-on-surface-variant hover:text-white",
+                        pageNumber === currentPage ? "border-primary/50 text-primary" : "border-white/5 text-on-surface-variant hover:text-white",
                       )}
                     >
-                      {item}
+                      {pageNumber}
                     </button>
-                  ),
-                )}
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (canGoNext) {
+                      setCurrentPage((current) => current + 1);
+                    }
+                  }}
+                  className="kv-focus-ring flex h-10 w-10 items-center justify-center rounded-xl border border-white/8 text-on-surface-variant transition-colors duration-200 hover:bg-white/5"
+                >
+                  <Icon name="chevron_right" className="text-[1rem]" />
+                </button>
               </div>
             </div>
           </SurfaceCard>

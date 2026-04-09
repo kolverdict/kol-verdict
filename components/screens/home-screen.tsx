@@ -27,6 +27,7 @@ const FEEDBACK_TIMEOUT_MS = 1800;
 const MAX_QUEUE_LENGTH = 500;
 const BROWSE_SWIPE_THRESHOLD_PX = 115;
 const MAX_BROWSE_SWIPE_OFFSET_PX = 280;
+const HOME_QUEUE_SESSION_KEY = "kolverdict.home.queue.order";
 
 function toVoteDirection(direction: SwipeDirection): VoteDirection {
   return direction === "trust" ? "love" : "hate";
@@ -90,6 +91,64 @@ function buildSessionQueue(cards: HomeCardView[]) {
   });
 
   return uniqueCards;
+}
+
+function shuffleArray<T>(array: T[]) {
+  const shuffled = [...array];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function persistSessionQueue(cards: HomeCardView[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      HOME_QUEUE_SESSION_KEY,
+      JSON.stringify(cards.map((card) => card.slug)),
+    );
+  } catch {
+    // Ignore storage failures and continue with the in-memory queue.
+  }
+}
+
+function resolveSessionQueue(cards: HomeCardView[]) {
+  if (cards.length <= 1 || typeof window === "undefined") {
+    return cards;
+  }
+
+  try {
+    const storedValue = window.sessionStorage.getItem(HOME_QUEUE_SESSION_KEY);
+
+    if (storedValue) {
+      const storedSlugs = JSON.parse(storedValue);
+
+      if (Array.isArray(storedSlugs) && storedSlugs.length === cards.length) {
+        const cardBySlug = new Map(cards.map((card) => [card.slug, card] as const));
+        const storedSlugSet = new Set(storedSlugs.filter((slug): slug is string => typeof slug === "string"));
+
+        if (
+          storedSlugSet.size === cards.length &&
+          cards.every((card) => storedSlugSet.has(card.slug))
+        ) {
+          return storedSlugs.map((slug) => cardBySlug.get(slug)).filter((card): card is HomeCardView => Boolean(card));
+        }
+      }
+    }
+  } catch {
+    // Ignore malformed session data and fall back to a fresh shuffle.
+  }
+
+  const shuffledCards = shuffleArray(cards);
+  persistSessionQueue(shuffledCards);
+  return shuffledCards;
 }
 
 function getNextQueueIndex(
@@ -1211,7 +1270,9 @@ export function HomeScreen() {
       try {
         const cardsResponse = await fetch("/api/kols", { cache: "no-store", signal: controller.signal });
         const cardsPayload = await parseApiResponse<HomeResponse>(cardsResponse);
-        const sessionQueue = buildSessionQueue(cardsPayload.cards).slice(0, MAX_QUEUE_LENGTH);
+        const sessionQueue = resolveSessionQueue(
+          buildSessionQueue(cardsPayload.cards).slice(0, MAX_QUEUE_LENGTH),
+        );
 
         if (!active) {
           return;

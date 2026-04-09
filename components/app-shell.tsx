@@ -3,10 +3,23 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { navItems, type NavKey } from "@/lib/mock-data";
+import { parseApiResponse } from "@/lib/api-client";
+import type { KolSearchResponse } from "@/lib/types/api";
 import { cx } from "@/lib/utils";
 import { GhostButton, Icon, ImageCard } from "@/components/ui";
+
+const LANDING_PAGE_URL = "https://kolverdict.fun/";
+
+function normalizeSearchQuery(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 type MobileShellProps = {
   navKey: NavKey | null;
@@ -81,7 +94,11 @@ export function MobileShell({
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background md:hidden">
       <header className="glass-panel fixed inset-x-0 top-0 z-40 flex h-[4.75rem] items-center justify-between border-b border-white/8 px-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)] md:hidden">
-        <div className="flex items-center gap-3">
+        <a
+          href={LANDING_PAGE_URL}
+          aria-label="Go to Kolverdict landing page"
+          className="flex items-center gap-3"
+        >
           <ImageCard
             src={avatar}
             alt="KOL Verdict profile avatar"
@@ -97,7 +114,7 @@ export function MobileShell({
               </div>
             ) : null}
           </div>
-        </div>
+        </a>
         <button
           type="button"
           className={cx(
@@ -171,15 +188,46 @@ export function DesktopShell({
   className,
   railButtonVariant = "primary",
 }: DesktopShellProps) {
+  const router = useRouter();
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const isSearchingRef = useRef(false);
+
+  async function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const rawQuery = searchInputRef.current?.value.trim() ?? "";
+    const normalizedQuery = normalizeSearchQuery(rawQuery);
+    if (!rawQuery || !normalizedQuery || isSearchingRef.current) {
+      return;
+    }
+
+    isSearchingRef.current = true;
+
+    try {
+      const response = await fetch(`/api/kols/search?query=${encodeURIComponent(rawQuery)}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      const result = await parseApiResponse<KolSearchResponse>(response);
+      router.push(`/kol/${result.match?.slug ?? normalizedQuery}`);
+    } catch {
+      router.push(`/kol/${normalizedQuery}`);
+    } finally {
+      isSearchingRef.current = false;
+    }
+  }
+
   return (
     <div className="hidden min-h-screen bg-background text-on-surface md:block">
       <aside className="fixed inset-y-0 left-0 z-40 flex w-[14rem] flex-col border-r border-white/8 bg-[rgba(7,9,9,0.96)] px-4 py-5">
-        <div className="space-y-1">
-          <div className="font-display text-[1.25rem] font-bold uppercase tracking-[-0.055em] text-white">KOL Verdict</div>
-          <div className="font-label text-[0.56rem] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
-            Verdict Engine
+        <a href={LANDING_PAGE_URL} aria-label="Go to Kolverdict landing page" className="block">
+          <div className="space-y-1">
+            <div className="font-display text-[1.25rem] font-bold uppercase tracking-[-0.055em] text-white">KOL Verdict</div>
+            <div className="font-label text-[0.56rem] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
+              Verdict Engine
+            </div>
           </div>
-        </div>
+        </a>
 
         <nav className="mt-7 space-y-1.5">
           {navItems.map((item) => {
@@ -230,14 +278,26 @@ export function DesktopShell({
         >
           <div className="flex items-center gap-6">
             {searchPlaceholder ? (
-              <label className="flex h-12 min-w-[18rem] items-center gap-3 rounded-full bg-surface-container-lowest px-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-                <Icon name="search" className="text-[1.2rem] text-on-surface-variant" />
+              <form
+                role="search"
+                onSubmit={handleSearchSubmit}
+                className="flex h-12 min-w-[18rem] items-center gap-3 rounded-full bg-surface-container-lowest px-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
+              >
+                <button
+                  type="submit"
+                  aria-label="Search KOL profiles"
+                  className="flex items-center justify-center text-on-surface-variant"
+                >
+                  <Icon name="search" className="text-[1.2rem]" />
+                </button>
                 <input
+                  ref={searchInputRef}
                   type="text"
                   placeholder={searchPlaceholder}
+                  aria-label={searchPlaceholder}
                   className="w-full bg-transparent text-sm text-on-surface placeholder:text-on-surface-variant"
                 />
-              </label>
+              </form>
             ) : null}
           </div>
 

@@ -25,6 +25,8 @@ const VERDICT_ACK_MS = 180;
 const CARD_EXIT_MS = 280;
 const FEEDBACK_TIMEOUT_MS = 1800;
 const MAX_QUEUE_LENGTH = 500;
+const BROWSE_SWIPE_THRESHOLD_PX = 115;
+const MAX_BROWSE_SWIPE_OFFSET_PX = 280;
 
 function toVoteDirection(direction: SwipeDirection): VoteDirection {
   return direction === "trust" ? "love" : "hate";
@@ -111,6 +113,32 @@ function feedbackColorClass(tone?: FeedbackTone | null) {
   return "text-on-surface-variant/50";
 }
 
+function browseDirectionFromOffset(offsetX: number, offsetY: number): BrowseDirection | null {
+  const clampedOffsetX = clamp(offsetX, -MAX_BROWSE_SWIPE_OFFSET_PX, MAX_BROWSE_SWIPE_OFFSET_PX);
+  const clampedOffsetY = clamp(offsetY, -MAX_BROWSE_SWIPE_OFFSET_PX, MAX_BROWSE_SWIPE_OFFSET_PX);
+
+  if (Math.abs(clampedOffsetX) >= Math.abs(clampedOffsetY)) {
+    if (clampedOffsetX > BROWSE_SWIPE_THRESHOLD_PX) {
+      return "previous";
+    }
+
+    if (clampedOffsetX < -BROWSE_SWIPE_THRESHOLD_PX) {
+      return "next";
+    }
+
+    return null;
+  }
+
+  if (clampedOffsetY > BROWSE_SWIPE_THRESHOLD_PX) {
+    return "previous";
+  }
+
+  if (clampedOffsetY < -BROWSE_SWIPE_THRESHOLD_PX) {
+    return "next";
+  }
+
+  return null;
+}
 function reasonTagToneClasses(tone: HomeCardView["reasonTags"][number]["tone"]) {
   if (tone === "primary") {
     return "border-primary/18 bg-primary/10 text-primary";
@@ -1043,18 +1071,16 @@ function MobileVerdictSurface({
         {!isTransitioning ? (
           <motion.div
             key={activeCard.slug}
-            drag={!browseLocked ? "x" : false}
-            dragConstraints={{ left: 0, right: 0 }}
+            drag={!browseLocked}
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             onDragEnd={(_, info) => {
               if (browseLocked) {
                 return;
               }
 
-              const offset = clamp(info.offset.x, -280, 280);
-              if (offset > 115) {
-                onBrowse("previous");
-              } else if (offset < -115) {
-                onBrowse("next");
+              const browseDirection = browseDirectionFromOffset(info.offset.x, info.offset.y);
+              if (browseDirection) {
+                onBrowse(browseDirection);
               }
             }}
             initial={{ opacity: 0, y: 20, scale: 0.98 }}

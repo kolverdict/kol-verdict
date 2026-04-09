@@ -114,7 +114,13 @@ function LeaderboardMobileRow({
         {rank}
       </div>
       <div className="relative h-14 w-14 overflow-hidden rounded-xl border border-primary/25 bg-surface-container-highest">
-        <ImageCard src={entry.image} alt={entry.handle} className="h-full w-full" sizes="72px" />
+        <ImageCard
+          src={entry.image}
+          alt={`${entry.displayName ?? entry.handle} avatar`}
+          className="h-full w-full"
+          sizes="72px"
+          fallbackSrc="/default-avatar.svg"
+        />
         {entry.verified ? (
           <div className="absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-surface-container-high" />
         ) : null}
@@ -198,7 +204,13 @@ function DesktopLeaderboardRow({
             entry.muted ? "border-outline-variant/30" : "border-primary-dim/30",
           )}
         >
-          <ImageCard src={entry.image} alt={entry.handle} className="h-full w-full" sizes="48px" />
+          <ImageCard
+            src={entry.image}
+            alt={`${entry.displayName ?? entry.handle} avatar`}
+            className="h-full w-full"
+            sizes="48px"
+            fallbackSrc="/default-avatar.svg"
+          />
         </div>
         <div>
           <div className="font-display text-[1.05rem] font-bold tracking-[-0.05em] text-white">{entry.handle}</div>

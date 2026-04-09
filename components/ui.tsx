@@ -3,7 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { cx } from "@/lib/utils";
+
+const AVATAR_FALLBACK_TIMEOUT_MS = 4000;
+
+function sanitizeImageSrc(src: string | null | undefined) {
+  const trimmed = src?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
 
 type IconProps = {
   name: string;
@@ -33,6 +41,7 @@ type ImageCardProps = {
   priority?: boolean;
   sizes?: string;
   imageClassName?: string;
+  fallbackSrc?: string;
 };
 
 export function ImageCard({
@@ -42,11 +51,73 @@ export function ImageCard({
   priority,
   sizes = "100vw",
   imageClassName,
+  fallbackSrc,
 }: ImageCardProps) {
+  const sanitizedSrc = sanitizeImageSrc(src);
+  const sanitizedFallbackSrc = sanitizeImageSrc(fallbackSrc);
+  const initialSrc = sanitizedSrc ?? sanitizedFallbackSrc;
+  const [resolvedSrc, setResolvedSrc] = useState(initialSrc);
+  const fallbackTimeoutRef = useRef<number | null>(null);
+
+  function clearFallbackTimeout() {
+    if (fallbackTimeoutRef.current !== null) {
+      window.clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
+    }
+  }
+
+  useEffect(() => {
+    setResolvedSrc(initialSrc);
+  }, [initialSrc]);
+
+  useEffect(() => {
+    clearFallbackTimeout();
+
+    if (!sanitizedFallbackSrc || !resolvedSrc || resolvedSrc === sanitizedFallbackSrc) {
+      return;
+    }
+
+    fallbackTimeoutRef.current = window.setTimeout(() => {
+      setResolvedSrc((current) => {
+        if (!current || current === sanitizedFallbackSrc) {
+          return current;
+        }
+
+        return sanitizedFallbackSrc;
+      });
+      fallbackTimeoutRef.current = null;
+    }, AVATAR_FALLBACK_TIMEOUT_MS);
+
+    return clearFallbackTimeout;
+  }, [resolvedSrc, sanitizedFallbackSrc]);
+
+  useEffect(() => clearFallbackTimeout, []);
+
+  function handleImageLoad() {
+    clearFallbackTimeout();
+  }
+
+  function handleImageError() {
+    clearFallbackTimeout();
+
+    if (sanitizedFallbackSrc && resolvedSrc !== sanitizedFallbackSrc) {
+      setResolvedSrc(sanitizedFallbackSrc);
+    }
+  }
+
   return (
     <div className={cx("relative overflow-hidden", className)}>
-      {src ? (
-        <Image src={src} alt={alt} fill priority={priority} sizes={sizes} className={cx("object-cover", imageClassName)} />
+      {resolvedSrc ? (
+        <Image
+          src={resolvedSrc}
+          alt={alt}
+          fill
+          priority={priority}
+          sizes={sizes}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          className={cx("object-cover", imageClassName)}
+        />
       ) : (
         <>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_24%,rgba(0,207,252,0.16),transparent_34%),radial-gradient(circle_at_74%_78%,rgba(156,255,147,0.14),transparent_38%),linear-gradient(180deg,rgba(18,22,26,0.98),rgba(8,10,12,1))]" />

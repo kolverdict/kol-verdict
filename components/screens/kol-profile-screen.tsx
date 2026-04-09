@@ -642,7 +642,14 @@ export function KolProfileScreen({
             <div className="relative mx-auto h-28 w-28">
               <div className="absolute inset-0 rounded-[1.55rem] bg-primary/12 blur-2xl" />
               <div className="relative h-full w-full overflow-hidden rounded-[1.55rem] border border-primary/24 shadow-surface">
-                <ImageCard src={profile.kol.avatarUrl} alt={profile.kol.displayName} className="h-full w-full" sizes="128px" priority />
+                <ImageCard
+                  src={profile.kol.avatarUrl}
+                  alt={`${profile.kol.displayName} avatar`}
+                  className="h-full w-full"
+                  sizes="128px"
+                  priority
+                  fallbackSrc="/default-avatar.svg"
+                />
               </div>
             </div>
 
@@ -742,11 +749,12 @@ export function KolProfileScreen({
                 <div className="relative overflow-hidden rounded-[0.95rem]">
                   <ImageCard
                     src={profile.kol.avatarUrl}
-                    alt={profile.kol.displayName}
+                    alt={`${profile.kol.displayName} avatar`}
                     className="aspect-square w-full"
                     sizes="300px"
                     priority
                     imageClassName="object-cover grayscale"
+                    fallbackSrc="/default-avatar.svg"
                   />
                   <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1.5">

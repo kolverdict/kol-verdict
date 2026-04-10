@@ -10,6 +10,9 @@ Copy `.env.example` to `.env.local` and set these values:
 NEXT_PUBLIC_INSFORGE_URL=https://your-project.region.insforge.app
 INSFORGE_API_KEY=ik_your_server_api_key
 INSFORGE_PROJECT_ID=your-project-id
+# If your deploy platform only exposes a public project id, use one of:
+# NEXT_PUBLIC_PROJECT_ID=your-project-id
+# NEXT_PUBLIC_REOWN_PROJECT_ID=your-project-id
 KOL_PROOF_SESSION_SECRET=replace-with-a-long-random-secret
 ```
 
@@ -25,7 +28,7 @@ KOL_PROOF_COMMENT_FEE_ETH=0.05
 Production requirements:
 
 - `KOL_PROOF_SESSION_SECRET` must be rotated away from `change-me-in-production`.
-- `NEXT_PUBLIC_INSFORGE_URL`, `INSFORGE_API_KEY`, `INSFORGE_PROJECT_ID`, and `KOL_PROOF_SESSION_SECRET` are mandatory for all core flows.
+- `NEXT_PUBLIC_INSFORGE_URL`, `INSFORGE_API_KEY`, `KOL_PROOF_SESSION_SECRET`, and a project id are mandatory for all core flows. Project id can be `INSFORGE_PROJECT_ID`, `NEXT_PUBLIC_PROJECT_ID`, or `NEXT_PUBLIC_REOWN_PROJECT_ID`.
 - The app no longer supports a dev/mock backend fallback.
 
 ## Backend Setup

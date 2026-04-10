@@ -13,6 +13,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   NEXT_PUBLIC_INSFORGE_URL: nullableString,
   NEXT_PUBLIC_INSFORGE_ANON_KEY: nullableString,
+  NEXT_PUBLIC_PROJECT_ID: nullableString,
+  NEXT_PUBLIC_REOWN_PROJECT_ID: nullableString,
   INSFORGE_API_KEY: nullableString,
   INSFORGE_PROJECT_ID: nullableString,
   INSFORGE_STORAGE_BUCKET_EVIDENCE: nullableString.default("evidence"),
@@ -32,15 +34,17 @@ export type RequiredBackendEnv = AppEnv & {
 
 function readEnv() {
   const parsed = envSchema.parse(process.env);
+  const projectId = parsed.INSFORGE_PROJECT_ID ?? parsed.NEXT_PUBLIC_PROJECT_ID ?? parsed.NEXT_PUBLIC_REOWN_PROJECT_ID;
   const hasInsforgeConfig = Boolean(
     parsed.NEXT_PUBLIC_INSFORGE_URL &&
       parsed.INSFORGE_API_KEY &&
-      parsed.INSFORGE_PROJECT_ID &&
+      projectId &&
       parsed.KOL_PROOF_SESSION_SECRET,
   );
 
   return {
     ...parsed,
+    INSFORGE_PROJECT_ID: projectId,
     hasInsforgeConfig,
   };
 }

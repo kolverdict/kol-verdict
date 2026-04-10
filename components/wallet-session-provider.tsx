@@ -61,12 +61,21 @@ type WalletSessionContextValue = {
 
 const WalletSessionContext = createContext<WalletSessionContextValue | null>(null);
 
-function getWalletProvider() {
+function getWalletWindow() {
   if (typeof window === "undefined") {
     return null;
   }
 
-  const walletWindow = window as WalletWindow;
+  return window as WalletWindow;
+}
+
+function getWalletProvider() {
+  const walletWindow = getWalletWindow();
+
+  if (!walletWindow) {
+    return null;
+  }
+
   return walletWindow.phantom?.solana ?? walletWindow.solana ?? walletWindow.solflare ?? null;
 }
 
@@ -120,6 +129,34 @@ function logWalletDevEvent(level: "info" | "error", message: string, payload?: R
 
   const logger = level === "error" ? console.error : console.info;
   logger("[wallet-auth]", entry);
+}
+
+function logWalletRuntimeConfig(provider: SolanaWalletProvider | null) {
+  if (!isDevelopment()) {
+    return;
+  }
+
+  const walletWindow = getWalletWindow();
+  const origin = walletWindow ? walletWindow.location.origin : null;
+
+  logWalletDevEvent("info", "wallet runtime config", {
+    origin,
+    metadata: {
+      url: origin,
+    },
+    projectId: {
+      present: Boolean(process.env.NEXT_PUBLIC_PROJECT_ID || process.env.NEXT_PUBLIC_REOWN_PROJECT_ID),
+      NEXT_PUBLIC_PROJECT_ID: Boolean(process.env.NEXT_PUBLIC_PROJECT_ID),
+      NEXT_PUBLIC_REOWN_PROJECT_ID: Boolean(process.env.NEXT_PUBLIC_REOWN_PROJECT_ID),
+    },
+    provider: {
+      phantomInjected: Boolean(walletWindow?.phantom?.solana),
+      solanaInjected: Boolean(walletWindow?.solana),
+      solflareInjected: Boolean(walletWindow?.solflare),
+      selectedIsPhantom: Boolean(provider?.isPhantom),
+      selectedIsSolflare: Boolean(provider?.isSolflare),
+    },
+  });
 }
 
 function formatWalletConnectError(step: WalletConnectStep, error: unknown) {
@@ -208,6 +245,8 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
 
     try {
       const provider = getWalletProvider();
+      logWalletRuntimeConfig(provider);
+
       if (!provider?.connect || !provider.signMessage) {
         throw new Error("Install a Solana wallet like Phantom to continue.");
       }
@@ -280,7 +319,7 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
 
         if (!meData.session || !meData.profile) {
           throw new Error(
-            `Wallet verify succeeded but /api/me returned no authenticated session. Check that you are using one localhost host consistently and that the dev server restarted with the current env. Request ${meResponse.headers.get("x-request-id") ?? "unknown"}.`,
+            `Wallet verify succeeded but /api/me returned no authenticated session. Check that you are using one app origin consistently and that the dev server restarted with the current env. Request ${meResponse.headers.get("x-request-id") ?? "unknown"}.`,
           );
         }
 

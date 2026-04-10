@@ -5,7 +5,7 @@ import type { ApiRequestContext } from "@/lib/backend/logging";
 import { logApiError } from "@/lib/backend/logging";
 
 export const BACKEND_NOT_CONFIGURED_MESSAGE =
-  "InsForge backend is not configured. Set NEXT_PUBLIC_INSFORGE_URL, INSFORGE_API_KEY, INSFORGE_PROJECT_ID, and KOL_PROOF_SESSION_SECRET.";
+  "InsForge backend is not configured. Set NEXT_PUBLIC_INSFORGE_URL, INSFORGE_API_KEY, KOL_PROOF_SESSION_SECRET, and one project id env: INSFORGE_PROJECT_ID, NEXT_PUBLIC_PROJECT_ID, or NEXT_PUBLIC_REOWN_PROJECT_ID.";
 export const GENERIC_SERVER_ERROR_MESSAGE = "Service temporarily unavailable. Please try again.";
 
 type AppErrorOptions = {

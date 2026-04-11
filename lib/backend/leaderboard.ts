@@ -49,7 +49,7 @@ function mapRealEntry(kol: KolRow, metrics?: Partial<KolMetricsCacheRow>): Leade
     bullishPercent,
     tier: scoreToTier(Math.round(trustScore * 10)),
     sparkline: sparklineFromScore(trustScore),
-    verified: Boolean(kol.wallet_address) || sentimentCount >= 5,
+    verified: Boolean(kol.wallet_address) || Boolean(kol.verified) || sentimentCount >= 5,
     flowLabel: `${formatCompactNumber(verdictCount)} SIGNALS`,
     trendLabel: `+${trendValue.toFixed(1)}% ${trendingScore >= 60 ? "GAIN" : "STABLE"}`,
     trendTone: trendingScore >= 60 ? "primary" : "secondary",
@@ -103,7 +103,7 @@ export async function getLeaderboardSnapshot(tab: LeaderboardTab): Promise<Leade
   const [kolsResponse, profilesResponse] = await Promise.all([
     client.database
       .from("kols")
-      .select("id, slug, x_username, display_name, avatar_url, bio, wallet_address, initial_trust_score, kol_metrics_cache(*)")
+      .select("id, slug, x_username, display_name, avatar_url, bio, wallet_address, verified, initial_trust_score, kol_metrics_cache(*)")
       .eq("status", "active"),
     client.database.from("profiles").select("reputation_score"),
   ]);

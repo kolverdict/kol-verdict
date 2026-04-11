@@ -23,6 +23,7 @@ NEXT_PUBLIC_INSFORGE_ANON_KEY=
 INSFORGE_STORAGE_BUCKET_EVIDENCE=evidence
 INSFORGE_STORAGE_BUCKET_AVATARS=avatars
 KOL_PROOF_COMMENT_FEE_ETH=0.05
+ALLOW_SYNTHETIC_PROFILE_FILL=false
 ```
 
 Production requirements:
@@ -38,10 +39,12 @@ Apply InsForge schema in this order:
 ```bash
 npx @insforge/cli db import insforge/schema/001_kol_proof_core.sql
 npx @insforge/cli db import insforge/schema/002_kol_proof_policies.sql
+npx @insforge/cli db import insforge/schema/005_kol_profile_intelligence.sql
+npx @insforge/cli db import insforge/schema/006_kol_profile_intelligence_policies.sql
 npx @insforge/cli db import insforge/schema/004_kol_proof_rate_limits.sql
 ```
 
-Do not apply `insforge/schema/003_kol_proof_dev_seed.sql` in production.
+Do not apply `insforge/schema/003_kol_proof_dev_seed.sql` or `insforge/schema/007_kol_profile_intelligence_dev_seed.sql` in production.
 
 Create required storage buckets:
 

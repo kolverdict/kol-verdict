@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DesktopShell, MobileShell } from "@/components/app-shell";
+import { KolDetailCard } from "@/components/kols/kol-detail-card";
 import { Icon, ImageCard, Pill } from "@/components/ui";
 import { useWalletSession } from "@/components/wallet-session-provider";
-import { parseApiResponse, toUserFacingApiError } from "@/lib/api-client";
+import { ApiClientError, parseApiResponse, toUserFacingApiError } from "@/lib/api-client";
 import { brandAvatar } from "@/lib/mock-data";
-import type { HomeResponse, VoteRequest, VoteResponse } from "@/lib/types/api";
+import type { HomeResponse, KolProfileDetail, KolProfileDetailResponse, VoteRequest, VoteResponse } from "@/lib/types/api";
 import type { HomeCardView } from "@/lib/types/domain";
 import { clamp, cx } from "@/lib/utils";
 
@@ -20,6 +21,22 @@ type FeedbackTone = "primary" | "secondary" | "tertiary";
 type HomeLoadState = "loading" | "ready" | "empty" | "error" | "exhausted";
 type PendingVote = { slug: string; direction: SwipeDirection };
 type VerdictCardLayout = "mobile" | "desktop";
+type KolIntelligenceState =
+  | {
+      status: "loading";
+    }
+  | {
+      status: "ready";
+      profile: KolProfileDetail;
+    }
+  | {
+      status: "not_found";
+      message: string;
+    }
+  | {
+      status: "error";
+      message: string;
+    };
 
 const VERDICT_ACK_MS = 180;
 const CARD_EXIT_MS = 280;
@@ -212,6 +229,36 @@ function reasonTagToneClasses(tone: HomeCardView["reasonTags"][number]["tone"]) 
   }
 
   return "border-white/10 bg-white/6 text-on-surface-variant";
+}
+
+function resolveSummaryCard(
+  card: HomeCardView,
+  intelligenceState?: KolIntelligenceState,
+) {
+  const profile = intelligenceState?.status === "ready" ? intelligenceState.profile : null;
+  const reputation = profile?.trustScore ?? card.reputation;
+  const verification = profile
+    ? profile.verified
+      ? reputation >= 90
+        ? "Oracle Verified Alpha"
+        : "Verified Oracle"
+      : "Registry Tracked"
+    : card.verification;
+
+  return {
+    ...card,
+    name: profile?.displayName || card.name,
+    handle: profile?.handle || card.handle,
+    image: profile?.avatarUrl ?? card.image,
+    bio: profile?.bio?.trim() || card.bio,
+    reputation,
+    verification,
+    globalRank: profile?.globalRank !== null && profile?.globalRank !== undefined ? `Global Rank #${profile.globalRank}` : card.globalRank,
+    placeholderLabel:
+      profile && (profile.sourceMeta.isPlaceholder || profile.sourceMeta.dataSource === "synthetic_fallback")
+        ? "Placeholder intelligence"
+        : null,
+  };
 }
 
 function useFinePointer() {
@@ -502,21 +549,31 @@ function DesktopBrowseControls({
 function VerdictCard({
   card,
   layout,
+  isExpanded,
+  intelligenceState,
   direction,
   pendingDirection,
   voteLocked,
   enableInteractiveMotion,
   feedback,
+  onExpand,
+  onCollapse,
+  onRetryIntelligence,
   onReject,
   onEndorse,
 }: {
   card: HomeCardView;
   layout: VerdictCardLayout;
+  isExpanded: boolean;
+  intelligenceState?: KolIntelligenceState;
   direction: CardTransitionDirection | null;
   pendingDirection: SwipeDirection | null;
   voteLocked: boolean;
   enableInteractiveMotion: boolean;
   feedback: { text: string; tone: FeedbackTone } | null;
+  onExpand: () => void;
+  onCollapse: () => void;
+  onRetryIntelligence: () => void;
   onReject: () => void;
   onEndorse: () => void;
 }) {
@@ -534,6 +591,7 @@ function VerdictCard({
     : "w-full rounded-[1.5rem] border border-white/8 px-4 py-3";
   const cardHeight = isDesktop ? "min-h-[31rem]" : "min-h-0";
   const feedbackText = feedback?.text ?? "";
+  const summaryCard = resolveSummaryCard(card, intelligenceState);
 
   useEffect(() => {
     if (!canTilt) {
@@ -541,6 +599,29 @@ function VerdictCard({
       tiltY.set(0);
     }
   }, [canTilt, tiltX, tiltY]);
+
+  if (isExpanded) {
+    if (intelligenceState?.status === "ready") {
+      return (
+        <KolDetailCard
+          detail={intelligenceState.profile}
+          reasonTags={card.reasonTags}
+          layout={layout}
+          onCollapse={onCollapse}
+        />
+      );
+    }
+
+    return (
+      <VerdictDetailStatusCard
+        layout={layout}
+        status={intelligenceState?.status === "not_found" ? "not_found" : intelligenceState?.status === "error" ? "error" : "loading"}
+        message={intelligenceState?.status === "error" || intelligenceState?.status === "not_found" ? intelligenceState.message : undefined}
+        onRetry={onRetryIntelligence}
+        onCollapse={onCollapse}
+      />
+    );
+  }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
     if (!canTilt) {
@@ -563,12 +644,14 @@ function VerdictCard({
   if (isDesktop) {
     return (
       <motion.div
+        onClick={onExpand}
         onPointerMove={handlePointerMove}
         onPointerLeave={resetTilt}
         onPointerCancel={resetTilt}
         style={canTilt ? { rotateX, rotateY, transformPerspective: 1600 } : undefined}
         className={cx(
           "group relative overflow-hidden rounded-[2rem] border border-white/8 bg-surface-container-high p-6 shadow-surface-lg transition-[box-shadow,transform,border-color] duration-300 will-change-transform [transform-style:preserve-3d]",
+          "cursor-pointer",
           canTilt ? "hover:border-secondary/18 hover:shadow-[0_34px_82px_rgba(0,0,0,0.52)]" : "",
         )}
       >
@@ -593,19 +676,19 @@ function VerdictCard({
           <section className="flex flex-col justify-between rounded-[1.5rem] border border-white/8 bg-black/16 p-6">
             <div>
               <Pill
-                tone={card.reputation >= 70 ? "primary" : "secondary"}
+                tone={summaryCard.reputation >= 70 ? "primary" : "secondary"}
                 className="border-white/10 bg-surface-container-low px-3.5 py-1.5 text-[0.54rem] text-white"
               >
-                <span className={cx("h-2 w-2 rounded-full", card.reputation >= 70 ? "bg-primary" : "bg-secondary")} />
-                {card.verification}
+                <span className={cx("h-2 w-2 rounded-full", summaryCard.reputation >= 70 ? "bg-primary" : "bg-secondary")} />
+                {summaryCard.verification}
               </Pill>
 
               <div className="relative mt-6 w-fit">
-                <div className={cx("absolute inset-0 rounded-3xl blur-3xl", card.reputation >= 70 ? "bg-primary/10" : "bg-secondary/10")} />
+                <div className={cx("absolute inset-0 rounded-3xl blur-3xl", summaryCard.reputation >= 70 ? "bg-primary/10" : "bg-secondary/10")} />
                 <div className={cx("relative overflow-hidden border border-white/10 bg-surface-container-highest shadow-[0_16px_34px_rgba(0,0,0,0.3)]", imageSize)}>
                   <ImageCard
-                    src={card.image}
-                    alt={`${card.name} avatar`}
+                    src={summaryCard.image}
+                    alt={`${summaryCard.name} avatar`}
                     priority
                     sizes="220px"
                     className="h-full w-full"
@@ -618,15 +701,15 @@ function VerdictCard({
 
               <div className="mt-6">
                 <h1 className="font-display text-[3.55rem] font-bold leading-[0.92] tracking-[-0.08em] text-white">
-                  {card.name}
+                  {summaryCard.name}
                 </h1>
                 <p className="mt-1 font-label text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-secondary">
-                  {card.handle}
+                  {summaryCard.handle}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.82rem] text-on-surface-variant">
                   <span>{card.role}</span>
                   <span className="h-1 w-1 rounded-full bg-on-surface-variant/35" />
-                  <span>{card.globalRank}</span>
+                  <span>{summaryCard.globalRank}</span>
                   <span className="h-1 w-1 rounded-full bg-on-surface-variant/35" />
                   <span>Active</span>
                 </div>
@@ -634,7 +717,7 @@ function VerdictCard({
             </div>
 
             <p className="mt-6 max-w-[26rem] text-[0.95rem] leading-7 text-on-surface-variant">
-              {card.bio}
+              {summaryCard.bio}
             </p>
           </section>
 
@@ -645,14 +728,14 @@ function VerdictCard({
                   <div className="kv-label text-primary">Verdict Score</div>
                   <div className="mt-3 flex items-end gap-2">
                     <span className="font-display text-[5.1rem] font-bold leading-none tracking-[-0.09em] text-primary tabular-nums">
-                      {card.reputation}
+                      {summaryCard.reputation}
                     </span>
                     <span className="pb-3 font-label text-[0.8rem] font-semibold uppercase tracking-[0.12em] text-on-surface-variant">
                       /100
                     </span>
                   </div>
                 </div>
-                {card.reasonTags.length > 0 ? (
+                {card.reasonTags.length > 0 || summaryCard.placeholderLabel ? (
                   <div className="flex max-w-[13rem] flex-wrap justify-end gap-2">
                     {card.reasonTags.slice(0, 2).map((tag) => (
                       <span
@@ -665,6 +748,11 @@ function VerdictCard({
                         {tag.label}
                       </span>
                     ))}
+                    {summaryCard.placeholderLabel ? (
+                      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/6 px-3 py-1.5 font-label text-[0.56rem] font-semibold uppercase tracking-[0.12em] text-on-surface-variant">
+                        {summaryCard.placeholderLabel}
+                      </span>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -688,7 +776,7 @@ function VerdictCard({
                 {feedbackText}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3" onClick={(event) => event.stopPropagation()}>
                 <VerdictActionButton
                   label="Reject"
                   icon="close"
@@ -719,12 +807,14 @@ function VerdictCard({
 
   return (
     <motion.div
+      onClick={onExpand}
       onPointerMove={handlePointerMove}
       onPointerLeave={resetTilt}
       onPointerCancel={resetTilt}
       style={canTilt ? { rotateX, rotateY, transformPerspective: 1600 } : undefined}
       className={cx(
         "group relative overflow-hidden bg-surface-container-high shadow-surface-lg transition-[box-shadow,transform,border-color] duration-300 will-change-transform [transform-style:preserve-3d]",
+        "cursor-pointer",
         containerClasses,
         cardHeight,
         canTilt ? "hover:border-secondary/18 hover:shadow-[0_34px_82px_rgba(0,0,0,0.52)]" : "",
@@ -757,25 +847,25 @@ function VerdictCard({
       <div className="relative z-10 flex h-full flex-col">
         <div className="flex justify-center">
           <Pill
-            tone={card.reputation >= 70 ? "primary" : "secondary"}
+            tone={summaryCard.reputation >= 70 ? "primary" : "secondary"}
             className="border-white/10 bg-black/20 px-3 py-1.5 text-[0.52rem] text-white"
           >
             <span
               className={cx(
                 "h-2 w-2 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.6)]",
-                card.reputation >= 70 ? "bg-primary" : "bg-secondary",
+                summaryCard.reputation >= 70 ? "bg-primary" : "bg-secondary",
               )}
             />
-            {card.verification}
+            {summaryCard.verification}
           </Pill>
         </div>
 
         <div className={cx("relative mx-auto", isDesktop ? "mb-5 mt-3" : "mb-2 mt-2")}>
-          <div className={cx("absolute inset-0 rounded-[2rem] blur-2xl", card.reputation >= 70 ? "bg-primary/10" : "bg-secondary/10")} />
+          <div className={cx("absolute inset-0 rounded-[2rem] blur-2xl", summaryCard.reputation >= 70 ? "bg-primary/10" : "bg-secondary/10")} />
           <div className={cx("relative overflow-hidden border border-white/8 bg-surface-container-highest shadow-[0_18px_40px_rgba(0,0,0,0.32)]", imageSize)}>
             <ImageCard
-              src={card.image}
-              alt={`${card.name} avatar`}
+              src={summaryCard.image}
+              alt={`${summaryCard.name} avatar`}
               priority
               sizes={isDesktop ? "320px" : "240px"}
               className="h-full w-full"
@@ -793,10 +883,10 @@ function VerdictCard({
               isDesktop ? "text-[4.35rem]" : "text-[2rem]",
             )}
           >
-            {card.name}
+            {summaryCard.name}
           </h1>
           <p className={cx("mt-1 font-label font-semibold uppercase tracking-[0.14em] text-secondary", isDesktop ? "text-[0.78rem]" : "text-[0.62rem]")}>
-            {card.handle}
+            {summaryCard.handle}
           </p>
           <div
             className={cx(
@@ -806,7 +896,7 @@ function VerdictCard({
           >
             <span className="font-medium">{card.role}</span>
             <span className="h-1 w-1 rounded-full bg-on-surface-variant/35" />
-            <span className="font-medium">{card.globalRank}</span>
+            <span className="font-medium">{summaryCard.globalRank}</span>
             <span className="h-1 w-1 rounded-full bg-on-surface-variant/35" />
             <span className="font-medium">Active</span>
           </div>
@@ -817,13 +907,13 @@ function VerdictCard({
             </div>
             <div className="mt-1.5 flex items-end justify-center gap-1">
               <span className={cx("font-display font-bold leading-none tracking-[-0.08em] text-primary", isDesktop ? "text-[4.15rem]" : "text-[2.25rem]")}>
-                {card.reputation}
+                {summaryCard.reputation}
               </span>
               <span className={cx("font-label font-semibold uppercase tracking-[0.12em] text-on-surface-variant", isDesktop ? "pb-1.5 text-[0.78rem]" : "pb-1 text-[0.66rem]")}>/100</span>
             </div>
           </div>
 
-          {card.reasonTags.length > 0 ? (
+          {card.reasonTags.length > 0 || summaryCard.placeholderLabel ? (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -845,6 +935,19 @@ function VerdictCard({
                   {tag.label}
                 </motion.span>
               ))}
+              {summaryCard.placeholderLabel ? (
+                <motion.span
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: [0.2, 0, 0, 1], delay: card.reasonTags.length * 0.05 }}
+                  className={cx(
+                    "inline-flex items-center rounded-full border border-white/10 bg-white/6 font-label font-semibold uppercase tracking-[0.1em] text-on-surface-variant",
+                    isDesktop ? "px-3 py-1.5 text-[0.56rem]" : "px-2.5 py-1 text-[0.5rem]",
+                  )}
+                >
+                  {summaryCard.placeholderLabel}
+                </motion.span>
+              ) : null}
             </motion.div>
           ) : null}
 
@@ -860,7 +963,7 @@ function VerdictCard({
               overflow: "hidden",
             }}
           >
-            {card.bio}
+            {summaryCard.bio}
           </p>
         </div>
 
@@ -890,7 +993,10 @@ function VerdictCard({
             {feedbackText}
           </div>
 
-          <div className={cx("grid grid-cols-2", isDesktop ? "gap-3" : "gap-2.5")}>
+          <div
+            className={cx("grid grid-cols-2", isDesktop ? "gap-3" : "gap-2.5")}
+            onClick={(event) => event.stopPropagation()}
+          >
             <VerdictActionButton
               label="Reject"
               icon="close"
@@ -1022,8 +1128,98 @@ function VerdictQueueEmptyState({
   );
 }
 
+function VerdictDetailStatusCard({
+  layout,
+  status,
+  message,
+  onRetry,
+  onCollapse,
+}: {
+  layout: VerdictCardLayout;
+  status: "loading" | "error" | "not_found";
+  message?: string;
+  onRetry: () => void;
+  onCollapse: () => void;
+}) {
+  const isDesktop = layout === "desktop";
+  const isLoading = status === "loading";
+  const title =
+    status === "loading"
+      ? "Loading profile intelligence"
+      : status === "not_found"
+        ? "Profile intelligence unavailable"
+        : "Unable to load profile intelligence";
+  const body =
+    message ??
+    (status === "loading"
+      ? "Syncing intelligence data from the registry."
+      : "Try again in a moment or return to the summary card.");
+
+  return (
+    <div
+      className={cx(
+        "relative overflow-hidden rounded-[1.8rem] border border-white/8 bg-surface-container-high shadow-surface-lg",
+        isDesktop ? "w-full px-7 py-6" : "w-full px-4 py-4",
+      )}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgba(48,200,232,0.08),transparent_24%),radial-gradient(circle_at_80%_16%,rgba(146,245,143,0.08),transparent_26%),linear-gradient(180deg,rgba(21,26,30,0.98),rgba(9,11,13,1))]" />
+
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-4">
+          <Pill className="border-white/10 bg-black/18 text-white">
+            <span className={cx("h-2 w-2 rounded-full", isLoading ? "bg-secondary" : "bg-on-surface-variant")} />
+            {isLoading ? "Intelligence sync" : "Detail state"}
+          </Pill>
+
+          <button
+            type="button"
+            onClick={onCollapse}
+            className="kv-focus-ring inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 font-label text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-on-surface-variant transition-colors duration-200 hover:bg-white/8 hover:text-white"
+            aria-label="Back to summary view"
+          >
+            <Icon name="arrow_back" className="text-[0.95rem]" />
+            <span>{isDesktop ? "Back to Summary" : "Back"}</span>
+          </button>
+        </div>
+
+        <div className="mt-8 flex flex-col items-center text-center">
+          <div className={cx("flex items-center justify-center rounded-3xl border border-white/8 bg-surface-container-highest/70", isDesktop ? "h-28 w-28" : "h-24 w-24")}>
+            {isLoading ? (
+              <div className="h-12 w-12 rounded-full border-2 border-secondary/20 border-t-secondary motion-safe:animate-spin" />
+            ) : (
+              <Icon
+                name={status === "not_found" ? "person_search" : "warning"}
+                className={cx("text-secondary", isDesktop ? "text-[2.8rem]" : "text-[2.35rem]")}
+              />
+            )}
+          </div>
+
+          <h3 className={cx("mt-6 font-display font-bold leading-[0.96] tracking-[-0.06em] text-white", isDesktop ? "text-[2.5rem]" : "text-[1.7rem]")}>
+            {title}
+          </h3>
+          <p className={cx("mt-3 max-w-[30rem] text-on-surface-variant", isDesktop ? "text-[0.95rem] leading-7" : "text-[0.84rem] leading-6")}>
+            {body}
+          </p>
+
+          {!isLoading ? (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="kv-focus-ring mt-6 rounded-xl border border-secondary/25 bg-secondary/10 px-5 py-3 font-label text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-secondary transition-colors duration-200 hover:bg-secondary/16"
+            >
+              Retry Intelligence
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DesktopVerdictSurface({
   activeCard,
+  isExpanded,
+  intelligenceState,
   direction,
   voteLocked,
   browseLocked,
@@ -1037,8 +1233,13 @@ function DesktopVerdictSurface({
   canBrowseNext,
   onBrowse,
   onVote,
+  onExpand,
+  onCollapse,
+  onRetryIntelligence,
 }: {
   activeCard: HomeCardView;
+  isExpanded: boolean;
+  intelligenceState?: KolIntelligenceState;
   direction: CardTransitionDirection | null;
   voteLocked: boolean;
   browseLocked: boolean;
@@ -1052,6 +1253,9 @@ function DesktopVerdictSurface({
   canBrowseNext: boolean;
   onBrowse: (direction: BrowseDirection) => void;
   onVote: (card: HomeCardView, next: SwipeDirection) => Promise<void>;
+  onExpand: () => void;
+  onCollapse: () => void;
+  onRetryIntelligence: () => void;
 }) {
   return (
     <div className="relative flex w-full flex-col gap-4">
@@ -1072,11 +1276,16 @@ function DesktopVerdictSurface({
             <VerdictCard
               card={activeCard}
               layout="desktop"
+              isExpanded={isExpanded}
+              intelligenceState={intelligenceState}
               direction={direction}
               pendingDirection={pendingVote?.slug === activeCard.slug ? pendingVote.direction : null}
               voteLocked={voteLocked}
-              enableInteractiveMotion={!voteLocked && !isTransitioning}
+              enableInteractiveMotion={!voteLocked && !isTransitioning && !isExpanded}
               feedback={feedback}
+              onExpand={onExpand}
+              onCollapse={onCollapse}
+              onRetryIntelligence={onRetryIntelligence}
               onReject={() => void onVote(activeCard, "scam")}
               onEndorse={() => void onVote(activeCard, "trust")}
             />
@@ -1098,6 +1307,8 @@ function DesktopVerdictSurface({
 
 function MobileVerdictSurface({
   activeCard,
+  isExpanded,
+  intelligenceState,
   direction,
   voteLocked,
   browseLocked,
@@ -1109,8 +1320,13 @@ function MobileVerdictSurface({
   totalCount,
   onBrowse,
   onVote,
+  onExpand,
+  onCollapse,
+  onRetryIntelligence,
 }: {
   activeCard: HomeCardView;
+  isExpanded: boolean;
+  intelligenceState?: KolIntelligenceState;
   direction: CardTransitionDirection | null;
   voteLocked: boolean;
   browseLocked: boolean;
@@ -1122,6 +1338,9 @@ function MobileVerdictSurface({
   totalCount: number;
   onBrowse: (direction: BrowseDirection) => void;
   onVote: (card: HomeCardView, next: SwipeDirection) => Promise<void>;
+  onExpand: () => void;
+  onCollapse: () => void;
+  onRetryIntelligence: () => void;
 }) {
   return (
     <div className="relative flex w-full max-w-[23.25rem] flex-col gap-2">
@@ -1154,11 +1373,16 @@ function MobileVerdictSurface({
             <VerdictCard
               card={activeCard}
               layout="mobile"
+              isExpanded={isExpanded}
+              intelligenceState={intelligenceState}
               direction={direction}
               pendingDirection={pendingVote?.slug === activeCard.slug ? pendingVote.direction : null}
               voteLocked={voteLocked}
               enableInteractiveMotion={false}
               feedback={feedback}
+              onExpand={onExpand}
+              onCollapse={onCollapse}
+              onRetryIntelligence={onRetryIntelligence}
               onReject={() => void onVote(activeCard, "scam")}
               onEndorse={() => void onVote(activeCard, "trust")}
             />
@@ -1177,6 +1401,8 @@ export function HomeScreen() {
   const { session, requireWalletForWrite } = useWalletSession();
   const [queue, setQueue] = useState<HomeCardView[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [intelligenceBySlug, setIntelligenceBySlug] = useState<Record<string, KolIntelligenceState>>({});
   const [direction, setDirection] = useState<CardTransitionDirection | null>(null);
   const [pendingVote, setPendingVote] = useState<PendingVote | null>(null);
   const [isAuthPrompting, setIsAuthPrompting] = useState(false);
@@ -1191,6 +1417,7 @@ export function HomeScreen() {
   const feedbackTimeoutRef = useRef<number | null>(null);
   const authPromptingRef = useRef(false);
   const queueRef = useRef<HomeCardView[]>([]);
+  const intelligenceBySlugRef = useRef<Record<string, KolIntelligenceState>>({});
   const currentIndexRef = useRef(0);
   const reviewedSlugsRef = useRef<Record<string, boolean>>({});
   const actionLockedRef = useRef(false);
@@ -1198,10 +1425,12 @@ export function HomeScreen() {
   const activeCardSlugRef = useRef<string | null>(null);
 
   const activeCard = currentIndex < queue.length ? queue[currentIndex] : null;
+  const activeSlug = activeCard?.slug ?? null;
+  const activeIntelligence = activeCard ? intelligenceBySlug[activeCard.slug] : undefined;
   const nextCard = currentIndex + 1 < queue.length ? queue[currentIndex + 1] : null;
   const reviewedCount = Math.min(queue.length, Object.keys(reviewedSlugs).length);
   const voteLocked = pendingVote !== null || isAuthPrompting || isAcknowledging || isTransitioning;
-  const browseLocked = voteLocked;
+  const browseLocked = voteLocked || isExpanded;
   const canBrowsePrevious = currentIndex > 0;
   const canBrowseNext = currentIndex + 1 < queue.length;
   const showQueueSurface = loadState === "ready" && activeCard !== null;
@@ -1209,6 +1438,10 @@ export function HomeScreen() {
   useEffect(() => {
     queueRef.current = queue;
   }, [queue]);
+
+  useEffect(() => {
+    intelligenceBySlugRef.current = intelligenceBySlug;
+  }, [intelligenceBySlug]);
 
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -1229,6 +1462,89 @@ export function HomeScreen() {
   useEffect(() => {
     activeCardSlugRef.current = activeCard?.slug ?? null;
   }, [activeCard]);
+
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [activeCard?.slug]);
+
+  const loadKolIntelligence = useCallback(async (
+    slug: string,
+    options: {
+      force?: boolean;
+      signal?: AbortSignal;
+    } = {},
+  ) => {
+    const existingState = intelligenceBySlugRef.current[slug];
+
+    if (
+      !options.force &&
+      (existingState?.status === "loading" ||
+        existingState?.status === "ready" ||
+        existingState?.status === "not_found" ||
+        existingState?.status === "error")
+    ) {
+      return;
+    }
+
+    setIntelligenceBySlug((current) => ({
+      ...current,
+      [slug]: {
+        status: "loading",
+      },
+    }));
+
+    try {
+      const response = await fetch(`/api/kols/${slug}/intelligence`, {
+        cache: "no-store",
+        signal: options.signal,
+      });
+      const payload = await parseApiResponse<KolProfileDetailResponse>(response);
+
+      setIntelligenceBySlug((current) => ({
+        ...current,
+        [slug]: {
+          status: "ready",
+          profile: payload.profile,
+        },
+      }));
+    } catch (error) {
+      if (options.signal?.aborted) {
+        return;
+      }
+
+      if (error instanceof ApiClientError && error.statusCode === 404) {
+        setIntelligenceBySlug((current) => ({
+          ...current,
+          [slug]: {
+            status: "not_found",
+            message: "No stored profile intelligence is available for this KOL yet.",
+          },
+        }));
+        return;
+      }
+
+      setIntelligenceBySlug((current) => ({
+        ...current,
+        [slug]: {
+          status: "error",
+          message: toUserFacingApiError(error, "Unable to load profile intelligence."),
+        },
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activeSlug) {
+      return;
+    }
+
+    const controller = new AbortController();
+    void loadKolIntelligence(activeSlug, { signal: controller.signal });
+
+    return () => {
+      controller.abort();
+    };
+  }, [activeSlug, loadKolIntelligence]);
 
   function clearAcknowledgementTimeout() {
     if (acknowledgementTimeoutRef.current !== null) {
@@ -1503,6 +1819,8 @@ export function HomeScreen() {
           {showQueueSurface && activeCard ? (
             <MobileVerdictSurface
               activeCard={activeCard}
+              isExpanded={isExpanded}
+              intelligenceState={activeIntelligence}
               direction={direction}
               voteLocked={voteLocked}
               browseLocked={browseLocked}
@@ -1514,6 +1832,9 @@ export function HomeScreen() {
               totalCount={queue.length}
               onBrowse={browseQueue}
               onVote={submitVote}
+              onExpand={() => setIsExpanded(true)}
+              onCollapse={() => setIsExpanded(false)}
+              onRetryIntelligence={() => void loadKolIntelligence(activeCard.slug, { force: true })}
             />
           ) : loadState === "loading" ? (
             <div className="w-full max-w-[23.25rem]">
@@ -1545,6 +1866,8 @@ export function HomeScreen() {
             {showQueueSurface && activeCard ? (
               <DesktopVerdictSurface
                 activeCard={activeCard}
+                isExpanded={isExpanded}
+                intelligenceState={activeIntelligence}
                 direction={direction}
                 voteLocked={voteLocked}
                 browseLocked={browseLocked}
@@ -1558,6 +1881,9 @@ export function HomeScreen() {
                 canBrowseNext={canBrowseNext}
                 onBrowse={browseQueue}
                 onVote={submitVote}
+                onExpand={() => setIsExpanded(true)}
+                onCollapse={() => setIsExpanded(false)}
+                onRetryIntelligence={() => void loadKolIntelligence(activeCard.slug, { force: true })}
               />
             ) : loadState === "loading" ? (
               <VerdictLoadingState layout="desktop" />

@@ -21,6 +21,7 @@ const envSchema = z.object({
   INSFORGE_STORAGE_BUCKET_AVATARS: nullableString.default("avatars"),
   KOL_PROOF_SESSION_SECRET: nullableString,
   KOL_PROOF_COMMENT_FEE_ETH: nullableString.default("0.05"),
+  ALLOW_SYNTHETIC_PROFILE_FILL: nullableString.default("false"),
 });
 
 export type AppEnv = ReturnType<typeof readEnv>;
@@ -35,6 +36,9 @@ export type RequiredBackendEnv = AppEnv & {
 function readEnv() {
   const parsed = envSchema.parse(process.env);
   const projectId = parsed.INSFORGE_PROJECT_ID ?? parsed.NEXT_PUBLIC_PROJECT_ID ?? parsed.NEXT_PUBLIC_REOWN_PROJECT_ID;
+  const allowSyntheticProfileFill = ["1", "true", "yes", "on"].includes(
+    (parsed.ALLOW_SYNTHETIC_PROFILE_FILL ?? "false").toLowerCase(),
+  );
   const hasInsforgeConfig = Boolean(
     parsed.NEXT_PUBLIC_INSFORGE_URL &&
       parsed.INSFORGE_API_KEY &&
@@ -44,6 +48,7 @@ function readEnv() {
 
   return {
     ...parsed,
+    ALLOW_SYNTHETIC_PROFILE_FILL: allowSyntheticProfileFill,
     INSFORGE_PROJECT_ID: projectId,
     hasInsforgeConfig,
   };

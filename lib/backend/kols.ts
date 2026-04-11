@@ -21,8 +21,10 @@ import type {
   EvidenceType,
   KolCommentRow,
   KolMetricsCacheRow,
+  KolProfileMetricsRow,
   KolRow,
   KolVoteRow,
+  KolXProfileRow,
   PaymentStatus,
   ProfileRow,
   VoteDirection,
@@ -46,6 +48,30 @@ type HomeReasonAggregate = {
 
 const HOME_REASON_TAG_LIMIT = 2;
 const KOL_SEARCH_LIMIT = 10;
+
+type HomeKolMetaRow = Pick<
+  KolRow,
+  "id" | "slug" | "display_name" | "x_username" | "avatar_url" | "bio" | "verified" | "initial_trust_score"
+> & {
+  kol_profile_metrics?:
+    | Pick<KolProfileMetricsRow, "trust_score" | "global_rank">
+    | Array<Pick<KolProfileMetricsRow, "trust_score" | "global_rank">>
+    | null;
+  kol_x_profiles?:
+    | Pick<KolXProfileRow, "profile_image_url" | "verified">
+    | Array<Pick<KolXProfileRow, "profile_image_url" | "verified">>
+    | null;
+};
+
+type HomeKolMeta = {
+  kolId: string;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  reputation: number;
+  globalRank: string | null;
+  verified: boolean;
+};
 
 function toArray<T>(value: T | T[] | null | undefined) {
   if (!value) return [] as T[];
@@ -358,10 +384,42 @@ function buildHomeBadge(index: number, trendingScore: number) {
   return trendingScore >= 60 ? "Trending Signal" : `Ranking #${index + 1}`;
 }
 
-function buildHomeVerification(entry: Pick<LeaderboardEntryView, "trustScore" | "verified">) {
-  if (entry.verified && entry.trustScore >= 900) return "Oracle Verified Alpha";
-  if (entry.verified) return "Verified Oracle";
+function buildHomeVerification(
+  entry: Pick<LeaderboardEntryView, "trustScore" | "verified">,
+  options: {
+    reputation?: number;
+    verified?: boolean;
+  } = {},
+) {
+  const reputation = options.reputation ?? Math.round(entry.trustScore / 10);
+  const verified = options.verified ?? Boolean(entry.verified);
+
+  if (verified && reputation >= 90) return "Oracle Verified Alpha";
+  if (verified) return "Verified Oracle";
   return "Registry Tracked";
+}
+
+function buildHomeKolMeta(row: HomeKolMetaRow): HomeKolMeta {
+  const profileMetrics = firstRelation(row.kol_profile_metrics);
+  const xProfile = firstRelation(row.kol_x_profiles);
+  const reputation = Math.max(
+    0,
+    Math.min(100, Math.round(Number(profileMetrics?.trust_score ?? row.initial_trust_score ?? 0))),
+  );
+  const globalRank =
+    profileMetrics?.global_rank !== null && profileMetrics?.global_rank !== undefined
+      ? `Global Rank #${Math.round(Number(profileMetrics.global_rank))}`
+      : null;
+
+  return {
+    kolId: row.id,
+    name: row.display_name?.trim() || row.x_username,
+    image: xProfile?.profile_image_url ?? row.avatar_url ?? null,
+    bio: row.bio?.trim() || null,
+    reputation,
+    globalRank,
+    verified: Boolean(xProfile?.verified) || Boolean(row.verified),
+  };
 }
 
 function normalizeHomeReasonTag(tag: string | null | undefined, source: HomeReasonSource) {
@@ -555,24 +613,28 @@ function mapHomeCard(
   entry: LeaderboardEntryView,
   index: number,
   reasonTags: HomeCardView["reasonTags"],
+  meta?: HomeKolMeta,
 ): HomeCardView {
+  const reputation = meta?.reputation ?? Math.round(entry.trustScore / 10);
+  const verified = meta?.verified ?? Boolean(entry.verified);
+
   return {
     slug: entry.slug,
     handle: entry.handle,
-    role: buildHomeRole(entry),
-    reputation: Math.round(entry.trustScore / 10),
+    role: buildHomeRole({ ...entry, verified }),
+    reputation,
     badge: buildHomeBadge(index, entry.trendingScore),
-    verification: buildHomeVerification(entry),
-    image: entry.image,
+    verification: buildHomeVerification(entry, { reputation, verified }),
+    image: meta?.image ?? entry.image,
     subjectId: `0x${entry.slug.slice(0, 3)}...${entry.slug.slice(-3)}`,
-    name: entry.displayName ?? entry.handle.replace("@", ""),
-    bio: entry.subtitle,
+    name: meta?.name ?? entry.displayName ?? entry.handle.replace("@", ""),
+    bio: meta?.bio ?? entry.subtitle,
     monthlyChange: entry.trendLabel,
-    globalRank: `Global Rank #${index + 1}`,
+    globalRank: meta?.globalRank ?? `Global Rank #${index + 1}`,
     reasonTags,
     stats: [
       { label: "Total Mentions", value: entry.flowLabel.replace(" SIGNALS", "") },
-      { label: "Verdict Score", value: `${entry.trustScore}`, tone: "primary" },
+      { label: "Verdict Score", value: `${reputation}`, tone: "primary" },
       { label: "Consensus", value: `${entry.bullishPercent}% Bullish` },
     ],
   };
@@ -588,9 +650,18 @@ export async function getHomeCards() {
 
   const client = createInsForgeServerClient();
   const slugs = entries.map((entry) => entry.slug);
-  const kolLookup = await client.database.from("kols").select("id, slug").in("slug", slugs);
+  const kolLookup = await client.database
+    .from("kols")
+    .select("id, slug, display_name, x_username, avatar_url, bio, verified, initial_trust_score, kol_profile_metrics(trust_score, global_rank), kol_x_profiles(profile_image_url, verified)")
+    .in("slug", slugs);
   const slugToKolId = new Map(
-    (((kolLookup.error ? [] : (kolLookup.data as Array<Pick<KolRow, "id" | "slug">>)) ?? [])).map((row) => [row.slug, row.id]),
+    (((kolLookup.error ? [] : (kolLookup.data as Array<HomeKolMetaRow>)) ?? [])).map((row) => [row.slug, row.id]),
+  );
+  const slugToKolMeta = new Map(
+    (((kolLookup.error ? [] : (kolLookup.data as Array<HomeKolMetaRow>)) ?? [])).map((row) => [
+      row.slug,
+      buildHomeKolMeta(row),
+    ]),
   );
   const kolIds = [...new Set(slugToKolId.values())];
 
@@ -624,6 +695,7 @@ export async function getHomeCards() {
       entry,
       index,
       buildHomeReasonTags(entry, reasonTagAggregates, slugToKolId.get(entry.slug)),
+      slugToKolMeta.get(entry.slug),
     ),
   );
 }
@@ -736,7 +808,7 @@ export async function getKolProfile(slug: string): Promise<KolProfileView> {
   const client = createInsForgeServerClient();
   const kolResponse = await client.database
     .from("kols")
-    .select("id, slug, x_username, display_name, avatar_url, bio, initial_trust_score, kol_metrics_cache(*)")
+    .select("id, slug, x_username, display_name, avatar_url, bio, verified, initial_trust_score, kol_metrics_cache(*)")
     .eq("slug", slug)
     .eq("status", "active")
     .maybeSingle();

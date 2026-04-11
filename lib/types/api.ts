@@ -7,7 +7,7 @@ import type {
   LeaderboardSnapshot,
   UserProfileView,
 } from "@/lib/types/domain";
-import type { EvidenceType, VoteDirection } from "@/lib/types/db";
+import type { EvidenceType, KolDataConfidence, KolDataSource, VoteDirection } from "@/lib/types/db";
 
 export interface ApiSuccess<T> {
   ok: true;
@@ -78,6 +78,53 @@ export interface HomeResponse {
 export interface KolProfileResponse {
   profile: KolProfileView;
 }
+
+export interface KolSourceMeta {
+  dataSource: KolDataSource;
+  dataConfidence: KolDataConfidence;
+  isPlaceholder: boolean;
+  lastUpdatedAt: string | null;
+}
+
+export interface KolProfileDetail {
+  id: string;
+  slug: string;
+  handle: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  verified: boolean;
+  trustScore: number | null;
+  followersCount: number | null;
+  followingCount: number | null;
+  tweetsCount: number | null;
+  verifiedFollowersCount: number | null;
+  globalRank: number | null;
+  activityLabel: string | null;
+  verdictLabel: string | null;
+  verdictSummary: string | null;
+  riskLevel: string | null;
+  reasoningPoints: Array<{
+    id: string;
+    content: string;
+    sortOrder: number;
+  }>;
+  recentSignals: Array<{
+    id: string;
+    signalCode: string | null;
+    title: string;
+    statusLabel: string | null;
+    description: string | null;
+    impactLabel: string | null;
+    publishedAt: string | null;
+  }>;
+  sourceMeta: KolSourceMeta;
+}
+
+export interface KolProfileDetailResponse {
+  profile: KolProfileDetail;
+}
+
 export interface KolSearchMatch {
   slug: string;
 }
@@ -85,7 +132,6 @@ export interface KolSearchMatch {
 export interface KolSearchResponse {
   match: KolSearchMatch | null;
 }
-
 
 export interface VoteRequest {
   direction: VoteDirection;

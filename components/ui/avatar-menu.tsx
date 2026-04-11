@@ -108,6 +108,7 @@ export function AvatarMenu({
         ]
       : []),
   ];
+  const hasSignOutAction = items.some((item) => item.key === "sign_out");
   const enabledItems = items.filter((item) => !item.disabled);
   const enabledIndexByKey = new Map(enabledItems.map((item, index) => [item.key, index]));
 
@@ -344,9 +345,8 @@ export function AvatarMenu({
     const enabledIndex = enabledIndexByKey.get(item.key);
     const disabled = Boolean(item.disabled);
 
-    return (
+    const button = (
       <button
-        key={item.key}
         type="button"
         role={mode === "desktop" ? "menuitem" : undefined}
         disabled={disabled || busy}
@@ -395,6 +395,22 @@ export function AvatarMenu({
         </div>
       </button>
     );
+
+    if (item.key === "sign_out") {
+      return (
+        <div
+          key={item.key}
+          className={cx(
+            "border-white/8",
+            hasSignOutAction ? "mt-1 border-t pt-2" : "",
+          )}
+        >
+          {button}
+        </div>
+      );
+    }
+
+    return <div key={item.key}>{button}</div>;
   }
 
   return (
@@ -440,7 +456,7 @@ export function AvatarMenu({
                 Account
               </div>
             </div>
-            <div className="space-y-1">{items.map(renderItem)}</div>
+            <div className="space-y-0.5">{items.map(renderItem)}</div>
             {error ? (
               <p className="px-3 pb-2 pt-3 text-[0.74rem] leading-5 text-tertiary" role="alert">
                 {error}
@@ -504,7 +520,7 @@ export function AvatarMenu({
                 </button>
               </div>
 
-              <div className="mt-5 space-y-2" role="menu" aria-orientation="vertical">
+              <div className="mt-5 space-y-1.5" role="menu" aria-orientation="vertical">
                 {items.map(renderItem)}
               </div>
 

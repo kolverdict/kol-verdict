@@ -459,7 +459,6 @@ export function AddKolScreen() {
       <DesktopShell
         navKey="add"
         avatar={brandAvatar}
-        topbarIcons={["settings"]}
         className="overflow-y-auto thin-scrollbar"
         railButtonVariant="ghost"
       >

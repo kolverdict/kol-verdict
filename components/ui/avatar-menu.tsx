@@ -494,9 +494,9 @@ export function AvatarMenu({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 36 }}
               transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-              className="fixed inset-x-0 bottom-0 z-[60] rounded-t-[1.8rem] border border-white/10 bg-[rgba(10,13,15,0.98)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-24px_56px_rgba(0,0,0,0.48)] backdrop-blur-[18px]"
+              className="fixed inset-x-0 bottom-0 z-[60] flex h-auto max-h-[80dvh] flex-col items-stretch justify-start overflow-y-auto rounded-t-[1.8rem] border border-white/10 bg-[rgba(10,13,15,0.98)] px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-24px_56px_rgba(0,0,0,0.48)] backdrop-blur-[18px]"
             >
-              <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/14" />
+              <div className="mx-auto mb-3 h-1.5 w-14 rounded-full bg-white/14" />
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2
@@ -520,12 +520,12 @@ export function AvatarMenu({
                 </button>
               </div>
 
-              <div className="mt-5 space-y-1.5" role="menu" aria-orientation="vertical">
+              <div className="mt-4 space-y-1" role="menu" aria-orientation="vertical">
                 {items.map(renderItem)}
               </div>
 
               {error ? (
-                <p className="px-1 pb-1 pt-4 text-[0.82rem] leading-6 text-tertiary" role="alert">
+                <p className="px-1 pb-1 pt-3 text-[0.82rem] leading-6 text-tertiary" role="alert">
                   {error}
                 </p>
               ) : null}

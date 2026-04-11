@@ -100,7 +100,7 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
 
   return (
     <>
-      <MobileShell navKey="profile" avatar={avatar} eyebrow={eyebrow || undefined} rightIcon="settings">
+      <MobileShell navKey="profile" avatar={avatar} eyebrow={eyebrow || undefined}>
         <motion.section
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
@@ -220,12 +220,7 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
         </motion.section>
       </MobileShell>
 
-      <DesktopShell
-        navKey="profile"
-        avatar={avatar}
-        topbarIcons={["notifications", "settings"]}
-        className="overflow-y-auto thin-scrollbar"
-      >
+      <DesktopShell navKey="profile" avatar={avatar} className="overflow-y-auto thin-scrollbar">
         <div className="kv-page space-y-7">
             {userProfile ? (
               <>

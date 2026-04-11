@@ -27,8 +27,6 @@ type MobileShellProps = {
   avatar: string;
   title?: string;
   eyebrow?: string;
-  rightIcon?: string;
-  rightIconTone?: "secondary" | "muted";
   children: React.ReactNode;
   className?: string;
 };
@@ -172,7 +170,7 @@ export function DesktopShell({
   navKey,
   avatar,
   searchPlaceholder,
-  topbarIcons = ["notifications", "settings"],
+  topbarIcons = ["notifications"],
   children,
   className,
   railButtonVariant = "primary",

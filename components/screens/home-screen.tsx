@@ -1812,7 +1812,7 @@ export function HomeScreen() {
 
   return (
     <>
-      <MobileShell navKey="home" avatar={brandAvatar} rightIconTone="secondary">
+      <MobileShell navKey="home" avatar={brandAvatar}>
         <section className="relative flex min-h-[calc(100dvh-13rem)] items-start justify-center py-0">
           <div className="absolute inset-x-0 top-10 h-36 rounded-full bg-secondary/5 blur-[90px]" />
 

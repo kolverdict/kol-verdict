@@ -106,7 +106,7 @@ export function RouteStateScreen({
 
   return (
     <>
-      <MobileShell navKey={navKey} avatar={brandAvatar} rightIconTone={tone === "secondary" ? "secondary" : "muted"}>
+      <MobileShell navKey={navKey} avatar={brandAvatar}>
         <section className="relative flex min-h-[calc(100vh-12rem)] items-center justify-center">
           <div className={cx("pointer-events-none absolute left-1/2 top-24 h-56 w-56 -translate-x-1/2 rounded-full blur-[110px]", toneStyles.glow)} />
 

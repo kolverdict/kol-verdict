@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { AvatarMenu } from "@/components/ui/avatar-menu";
 import { navItems, type NavKey } from "@/lib/mock-data";
 import { parseApiResponse } from "@/lib/api-client";
 import type { KolSearchResponse } from "@/lib/types/api";
@@ -37,8 +38,6 @@ export function MobileShell({
   avatar,
   title = "KOL VERDICT",
   eyebrow,
-  rightIcon = "settings",
-  rightIconTone = "muted",
   children,
   className,
 }: MobileShellProps) {
@@ -115,17 +114,7 @@ export function MobileShell({
             ) : null}
           </div>
         </a>
-        <button
-          type="button"
-          className={cx(
-            "flex h-10 w-10 items-center justify-center rounded-2xl transition-colors",
-            rightIconTone === "secondary"
-              ? "text-secondary"
-              : "text-zinc-500 hover:text-secondary",
-          )}
-        >
-          <Icon name={rightIcon} className="text-[1.35rem]" filled={rightIconTone === "secondary"} />
-        </button>
+        <AvatarMenu fallbackAvatar={avatar} mode="mobile" />
       </header>
 
       <main className={cx("px-4 pb-[calc(7.25rem+env(safe-area-inset-bottom))] pt-[5.75rem]", className)}>{children}</main>
@@ -313,12 +302,7 @@ export function DesktopShell({
                 </button>
               ))}
             </div>
-            <ImageCard
-              src={avatar}
-              alt="KOL Verdict account avatar"
-              className="h-10 w-10 rounded-2xl border border-primary/20 bg-surface-container-high"
-              sizes="40px"
-            />
+            <AvatarMenu fallbackAvatar={avatar} mode="desktop" />
           </div>
         </header>
 

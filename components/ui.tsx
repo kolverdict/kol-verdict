@@ -120,7 +120,7 @@ export function ImageCard({
         />
       ) : (
         <>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_24%,rgba(0,207,252,0.16),transparent_34%),radial-gradient(circle_at_74%_78%,rgba(156,255,147,0.14),transparent_38%),linear-gradient(180deg,rgba(18,22,26,0.98),rgba(8,10,12,1))]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_24%,rgb(var(--secondary-rgb)_/_0.16),transparent_34%),radial-gradient(circle_at_74%_78%,rgb(var(--primary-rgb)_/_0.14),transparent_38%),linear-gradient(180deg,rgb(var(--surface-container-rgb)_/_0.98),rgb(var(--surface-rgb)_/_1))]" />
           <div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.8)_1px,transparent_1px)] [background-size:22px_22px]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_54%,rgba(0,0,0,0.48)_100%)]" />
         </>
@@ -402,7 +402,7 @@ export function MetricCard({ label, value, icon, tone = "neutral", className }: 
   return (
     <div className={cx("rounded-2xl border p-5", toneClasses, className)}>
       {icon ? (
-        <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-black/20">
+        <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-surface/40">
           <Icon name={icon} className="text-[1.35rem]" filled={tone !== "neutral"} />
         </div>
       ) : null}

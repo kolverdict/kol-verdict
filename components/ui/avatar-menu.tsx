@@ -339,7 +339,7 @@ export function AvatarMenu({
   const triggerClasses =
     mode === "desktop"
       ? "h-10 w-10 rounded-2xl border border-primary/20 bg-surface-container-high hover:border-white/16 hover:bg-surface-container"
-      : "h-10 w-10 rounded-2xl border border-white/10 bg-surface-container-high shadow-[0_10px_24px_rgba(0,0,0,0.24)] hover:border-white/16";
+      : "h-10 w-10 rounded-2xl border border-white/10 bg-surface-container-high shadow-surface hover:border-white/16";
 
   function renderItem(item: MenuItem) {
     const enabledIndex = enabledIndexByKey.get(item.key);
@@ -449,7 +449,7 @@ export function AvatarMenu({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-            className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[18rem] rounded-[1.35rem] border border-white/10 bg-[rgba(10,13,15,0.98)] p-2 shadow-[0_28px_56px_rgba(0,0,0,0.45)] backdrop-blur-[18px]"
+            className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[18rem] rounded-[1.35rem] border border-white/10 bg-surface-container-low/95 p-2 shadow-[0_28px_56px_rgba(0,0,0,0.45)] backdrop-blur-[18px]"
           >
             <div className="px-3 pb-2 pt-1">
               <div className="font-display text-[0.72rem] font-bold uppercase tracking-[0.18em] text-white">
@@ -494,7 +494,7 @@ export function AvatarMenu({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 36 }}
               transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-              className="fixed inset-x-0 bottom-0 z-[60] flex h-auto max-h-[80dvh] flex-col items-stretch justify-start overflow-y-auto rounded-t-[1.8rem] border border-white/10 bg-[rgba(10,13,15,0.98)] px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-24px_56px_rgba(0,0,0,0.48)] backdrop-blur-[18px]"
+              className="fixed inset-x-0 bottom-0 z-[60] flex h-auto max-h-[80dvh] flex-col items-stretch justify-start overflow-y-auto rounded-t-[1.8rem] border border-white/10 bg-surface-container-low/95 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-24px_56px_rgba(0,0,0,0.48)] backdrop-blur-[18px]"
             >
               <div className="mx-auto mb-3 h-1.5 w-14 rounded-full bg-white/14" />
               <div className="flex items-center justify-between gap-3">

@@ -140,7 +140,7 @@ export function RouteStateScreen({
 
           <div className="relative w-full max-w-[62rem] overflow-hidden rounded-[2.5rem] border border-white/5 bg-surface-container-low shadow-[0_28px_56px_rgba(0,0,0,0.54)]">
             <div className="grid min-h-[34rem] grid-cols-[0.92fr_1.08fr]">
-              <div className="relative overflow-hidden border-r border-white/5 bg-[linear-gradient(180deg,rgba(12,15,18,0.96),rgba(8,11,13,0.98))]">
+              <div className="relative overflow-hidden border-r border-white/5 bg-[linear-gradient(180deg,rgb(var(--surface-container-low-rgb)_/_0.96),rgb(var(--surface-rgb)_/_0.98))]">
                 <div className={cx("absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]", toneStyles.glow)} />
                 <div className="relative flex h-full flex-col items-center justify-center gap-6 px-12 text-center">
                   <div className={cx("flex h-28 w-28 items-center justify-center rounded-[2rem] border", toneStyles.border, toneStyles.background)}>

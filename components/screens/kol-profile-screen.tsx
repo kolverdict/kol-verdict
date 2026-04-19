@@ -33,7 +33,7 @@ function toneClasses(tone: Tone) {
 function HeatCell({ intensity }: { intensity: number }) {
   const classes =
     intensity >= 5
-      ? "bg-primary shadow-[0_0_14px_rgba(156,255,147,0.35)]"
+      ? "bg-primary shadow-[0_0_14px_rgb(var(--primary-rgb)_/_0.35)]"
       : intensity === 4
         ? "bg-primary/80"
         : intensity === 3
@@ -145,13 +145,13 @@ function CommunityCommentCard({ comment, compact = false }: { comment: CommentVi
       className={cx(
         "relative overflow-hidden rounded-[1.8rem] border p-5",
         comment.premium
-          ? "glass-panel border-secondary/40 shadow-[0_0_20px_rgba(0,209,255,0.1)]"
+          ? "glass-panel border-secondary/40 shadow-[0_0_20px_rgb(var(--secondary-rgb)_/_0.1)]"
           : "bg-surface-container-low border-white/8",
         compact ? "rounded-[1.35rem] p-4" : "",
       )}
     >
       {comment.premium ? (
-        <div className="absolute right-5 top-0 -translate-y-1/2 rounded-full bg-secondary px-3 py-1 shadow-[0_10px_20px_rgba(0,209,255,0.18)]">
+        <div className="absolute right-5 top-0 -translate-y-1/2 rounded-full bg-secondary px-3 py-1 shadow-[0_10px_20px_rgb(var(--secondary-rgb)_/_0.18)]">
           <div className="flex items-center gap-1">
             <Icon name="star" filled className="text-[0.85rem] text-on-secondary" />
             <span className="font-display text-[0.5rem] font-black uppercase tracking-[0.12em] text-on-secondary">
@@ -408,7 +408,7 @@ function DesktopOverview({
 }) {
   return (
     <div className="space-y-8">
-      <section className="rounded-[1.25rem] border border-white/5 bg-[linear-gradient(180deg,rgba(14,24,18,0.94),rgba(10,18,15,0.98))] px-6 py-6 shadow-[0_24px_48px_rgba(0,0,0,0.32)]">
+      <section className="rounded-[1.25rem] border border-white/5 bg-[linear-gradient(180deg,rgb(var(--surface-container-low-rgb)_/_0.96),rgb(var(--surface-rgb)_/_0.98))] px-6 py-6 shadow-[0_24px_48px_rgba(0,0,0,0.32)]">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="font-display text-[1.9rem] font-bold tracking-[-0.035em] text-white [word-spacing:0.08em]">Reputation Heatmap</h2>
           <span className="font-display text-[0.58rem] font-bold uppercase tracking-[0.24em] text-on-surface-variant">
@@ -695,7 +695,7 @@ export function KolProfileScreen({
             <div className="h-2 overflow-hidden rounded-full bg-surface-container-highest">
               <div className="flex h-full">
                 <div
-                  className="bg-primary shadow-[0_0_15px_rgba(156,255,147,0.45)]"
+                  className="bg-primary shadow-[0_0_15px_rgb(var(--primary-rgb)_/_0.45)]"
                   style={{ width: `${profile.kol.positive}%` }}
                 />
                 <div className="bg-tertiary/70" style={{ width: `${profile.kol.negative}%` }} />
@@ -745,7 +745,7 @@ export function KolProfileScreen({
         <section className="kv-page-tight relative">
           <div className="grid grid-cols-[16rem_minmax(0,1fr)_15rem] gap-5">
             <div className="space-y-5">
-              <section className="rounded-[1.15rem] border border-white/8 bg-[linear-gradient(180deg,rgba(14,24,22,0.9),rgba(8,13,13,0.98))] p-4 shadow-surface">
+              <section className="rounded-[1.15rem] border border-white/8 bg-[linear-gradient(180deg,rgb(var(--surface-container-low-rgb)_/_0.9),rgb(var(--surface-rgb)_/_0.98))] p-4 shadow-surface">
                 <div className="relative overflow-hidden rounded-[0.95rem]">
                   <ImageCard
                     src={profile.kol.avatarUrl}
@@ -937,7 +937,7 @@ export function KolProfileScreen({
                     Risk Advisory
                   </span>
                 </div>
-                <p className="text-[0.86rem] leading-7 text-[#ffb1aa]">{riskMessage}</p>
+                <p className="text-[0.86rem] leading-7 text-tertiary/82">{riskMessage}</p>
               </section>
             </div>
           </div>

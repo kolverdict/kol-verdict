@@ -123,7 +123,7 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                   Your Verdict Score
                 </h2>
                 <div className="flex items-end justify-center gap-2">
-                  <span className="font-display text-[4.6rem] font-black tracking-[-0.09em] text-transparent bg-[linear-gradient(135deg,#9cff93_0%,#00ec3b_100%)] bg-clip-text drop-shadow-[0_0_15px_rgba(156,255,147,0.3)]">
+                  <span className="font-display text-[4.6rem] font-black tracking-[-0.09em] text-transparent bg-gradient-to-r from-primary via-primary-dim to-secondary bg-clip-text drop-shadow-[0_0_15px_rgb(var(--primary-rgb)_/_0.3)]">
                     {formatInteger(userProfile.reputationPoints)}
                   </span>
                   <span className="pb-3 font-display text-[2rem] font-bold text-primary/50">pts</span>
@@ -132,7 +132,7 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                 <div className="mt-8 w-full max-w-md rounded-xl bg-surface-container-low p-1">
                   <div className="h-2 overflow-hidden rounded-lg bg-surface-container-highest">
                     <div
-                      className="h-full rounded-lg bg-gradient-to-r from-primary via-primary-dim to-secondary shadow-[0_0_20px_rgba(156,255,147,0.4)]"
+                      className="h-full rounded-lg bg-gradient-to-r from-primary via-primary-dim to-secondary shadow-[0_0_20px_rgb(var(--primary-rgb)_/_0.4)]"
                       style={{ width: `${progressWidth}%` }}
                     />
                   </div>
@@ -397,11 +397,11 @@ export function UserProfileScreen({ userProfile }: UserProfileScreenProps) {
                                   className={cx(
                                     "h-2 w-2 rounded-full",
                                     item.tone === "primary"
-                                      ? "bg-primary shadow-[0_0_8px_rgba(156,255,147,1)]"
+                                      ? "bg-primary shadow-[0_0_8px_rgb(var(--primary-rgb)_/_0.92)]"
                                       : item.tone === "secondary"
-                                        ? "bg-secondary shadow-[0_0_8px_rgba(0,207,252,1)]"
+                                        ? "bg-secondary shadow-[0_0_8px_rgb(var(--secondary-rgb)_/_0.92)]"
                                         : item.tone === "tertiary"
-                                          ? "bg-tertiary shadow-[0_0_8px_rgba(255,113,102,1)]"
+                                          ? "bg-tertiary shadow-[0_0_8px_rgb(var(--tertiary-rgb)_/_0.92)]"
                                           : "bg-on-surface-variant",
                                   )}
                                 />

@@ -401,7 +401,7 @@ function VerdictActionButton({
         isPrimary
           ? "border-primary/30 bg-primary text-on-primary shadow-[0_16px_34px_rgba(0,0,0,0.32)] hover:bg-primary/90"
           : "border-tertiary/35 bg-tertiary/10 text-tertiary shadow-[0_16px_34px_rgba(0,0,0,0.22)] hover:bg-tertiary/14",
-        active && (isPrimary ? "shadow-[0_0_26px_rgba(146,245,143,0.22)]" : "shadow-[0_0_24px_rgba(255,116,108,0.18)]"),
+        active && (isPrimary ? "shadow-[0_0_26px_rgb(var(--primary-rgb)_/_0.22)]" : "shadow-[0_0_24px_rgb(var(--tertiary-rgb)_/_0.18)]"),
       )}
     >
       <AnimatePresence>
@@ -416,8 +416,8 @@ function VerdictActionButton({
             className={cx(
               "pointer-events-none absolute inset-[-20%] rounded-[inherit]",
               isPrimary
-                ? "bg-[radial-gradient(circle,rgba(156,255,147,0.42)_0%,rgba(156,255,147,0.18)_42%,transparent_74%)]"
-                : "bg-[radial-gradient(circle,rgba(255,77,109,0.42)_0%,rgba(255,77,109,0.18)_42%,transparent_74%)]",
+                ? "bg-[radial-gradient(circle,rgb(var(--primary-rgb)_/_0.42)_0%,rgb(var(--primary-rgb)_/_0.18)_42%,transparent_74%)]"
+                : "bg-[radial-gradient(circle,rgb(var(--tertiary-rgb)_/_0.42)_0%,rgb(var(--tertiary-rgb)_/_0.18)_42%,transparent_74%)]",
             )}
           />
         ) : null}
@@ -655,7 +655,7 @@ function VerdictCard({
           canTilt ? "hover:border-secondary/18 hover:shadow-[0_34px_82px_rgba(0,0,0,0.52)]" : "",
         )}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgba(48,200,232,0.08),transparent_28%),radial-gradient(circle_at_76%_72%,rgba(146,245,143,0.07),transparent_34%),linear-gradient(180deg,rgba(23,29,30,0.98),rgba(9,12,13,1))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgb(var(--secondary-rgb)_/_0.08),transparent_28%),radial-gradient(circle_at_76%_72%,rgb(var(--primary-rgb)_/_0.07),transparent_34%),linear-gradient(180deg,rgb(var(--surface-container-rgb)_/_0.98),rgb(var(--surface-rgb)_/_1))]" />
         <motion.div
           aria-hidden="true"
           initial={false}
@@ -667,8 +667,8 @@ function VerdictCard({
           className={cx(
             "pointer-events-none absolute inset-0",
             direction === "trust"
-              ? "bg-[radial-gradient(circle_at_74%_58%,rgba(146,245,143,0.2),transparent_42%)]"
-              : "bg-[radial-gradient(circle_at_74%_58%,rgba(255,116,108,0.17),transparent_42%)]",
+              ? "bg-[radial-gradient(circle_at_74%_58%,rgb(var(--primary-rgb)_/_0.2),transparent_42%)]"
+              : "bg-[radial-gradient(circle_at_74%_58%,rgb(var(--tertiary-rgb)_/_0.17),transparent_42%)]",
           )}
         />
 
@@ -820,10 +820,10 @@ function VerdictCard({
         canTilt ? "hover:border-secondary/18 hover:shadow-[0_34px_82px_rgba(0,0,0,0.52)]" : "",
       )}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(48,200,232,0.08),transparent_30%),linear-gradient(180deg,rgba(23,29,30,0.98),rgba(9,12,13,1))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgb(var(--secondary-rgb)_/_0.08),transparent_30%),linear-gradient(180deg,rgb(var(--surface-container-rgb)_/_0.98),rgb(var(--surface-rgb)_/_1))]" />
       <div
         className={cx(
-          "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.12),transparent_42%),radial-gradient(circle_at_50%_54%,rgba(0,207,252,0.16),transparent_54%)] opacity-0 transition-opacity duration-300",
+          "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.12),transparent_42%),radial-gradient(circle_at_50%_54%,rgb(var(--secondary-rgb)_/_0.16),transparent_54%)] opacity-0 transition-opacity duration-300",
           canTilt ? "group-hover:opacity-100" : "",
         )}
       />
@@ -838,8 +838,8 @@ function VerdictCard({
         className={cx(
           "pointer-events-none absolute inset-0",
           direction === "trust"
-            ? "bg-[radial-gradient(circle_at_50%_44%,rgba(156,255,147,0.24),transparent_44%)]"
-            : "bg-[radial-gradient(circle_at_50%_44%,rgba(255,77,109,0.2),transparent_44%)]",
+            ? "bg-[radial-gradient(circle_at_50%_44%,rgb(var(--primary-rgb)_/_0.24),transparent_44%)]"
+            : "bg-[radial-gradient(circle_at_50%_44%,rgb(var(--tertiary-rgb)_/_0.2),transparent_44%)]",
         )}
       />
       <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_62%)]" />
@@ -1034,7 +1034,7 @@ function VerdictLoadingState({ layout }: { layout: VerdictCardLayout }) {
         isDesktop ? "w-full px-7 py-6" : "w-full px-4 py-4",
       )}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(0,207,252,0.12),transparent_28%),linear-gradient(180deg,rgba(21,26,30,0.98),rgba(9,11,13,1))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgb(var(--secondary-rgb)_/_0.12),transparent_28%),linear-gradient(180deg,rgb(var(--surface-container-rgb)_/_0.98),rgb(var(--surface-rgb)_/_1))]" />
       <div className="relative z-10 flex flex-col items-center text-center">
         <div className="h-8 w-36 rounded-full bg-white/10 motion-safe:animate-pulse" />
         <div className={cx("mt-5 rounded-3xl bg-white/6 motion-safe:animate-pulse", isDesktop ? "h-44 w-44" : "h-28 w-28")} />
@@ -1077,15 +1077,15 @@ function VerdictQueueEmptyState({
         isDesktop ? "w-full px-7 py-7" : "w-full px-4 py-5",
       )}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(0,207,252,0.12),transparent_28%),radial-gradient(circle_at_50%_78%,rgba(156,255,147,0.09),transparent_34%),linear-gradient(180deg,rgba(21,26,30,0.98),rgba(9,11,13,1))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgb(var(--secondary-rgb)_/_0.12),transparent_28%),radial-gradient(circle_at_50%_78%,rgb(var(--primary-rgb)_/_0.09),transparent_34%),linear-gradient(180deg,rgb(var(--surface-container-rgb)_/_0.98),rgb(var(--surface-rgb)_/_1))]" />
       <div className="relative z-10 flex flex-col items-center text-center">
         <Pill tone="secondary" className="bg-black/25 px-4 py-2 text-[0.56rem] text-white backdrop-blur-md">
-          <span className="h-2 w-2 rounded-full bg-secondary shadow-[0_0_10px_rgba(0,207,252,0.7)]" />
+          <span className="h-2 w-2 rounded-full bg-secondary shadow-[0_0_10px_rgb(var(--secondary-rgb)_/_0.7)]" />
           {copy.eyebrow}
         </Pill>
 
         <div className={cx("relative mt-6 flex items-center justify-center rounded-3xl border border-white/8 bg-surface-container-highest/70", isDesktop ? "h-36 w-36" : "h-28 w-28")}>
-          <div className="absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_center,rgba(48,200,232,0.14),transparent_55%)]" />
+          <div className="absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_center,rgb(var(--secondary-rgb)_/_0.14),transparent_55%)]" />
           <Icon name={state === "error" ? "warning" : "check_circle"} className={cx("relative z-10 text-secondary", isDesktop ? "text-[3.6rem]" : "text-[3rem]")} />
         </div>
 
@@ -1162,7 +1162,7 @@ function VerdictDetailStatusCard({
         isDesktop ? "w-full px-7 py-6" : "w-full px-4 py-4",
       )}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgba(48,200,232,0.08),transparent_24%),radial-gradient(circle_at_80%_16%,rgba(146,245,143,0.08),transparent_26%),linear-gradient(180deg,rgba(21,26,30,0.98),rgba(9,11,13,1))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_18%,rgb(var(--secondary-rgb)_/_0.08),transparent_24%),radial-gradient(circle_at_80%_16%,rgb(var(--primary-rgb)_/_0.08),transparent_26%),linear-gradient(180deg,rgb(var(--surface-container-rgb)_/_0.98),rgb(var(--surface-rgb)_/_1))]" />
 
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-4">

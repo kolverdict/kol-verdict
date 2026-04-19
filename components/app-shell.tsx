@@ -128,7 +128,7 @@ export function MobileShell({
           ease: [0.2, 0, 0, 1],
         }}
         className={cx(
-          "fixed inset-x-3 bottom-3 z-40 rounded-[1.55rem] border border-white/10 bg-[rgba(11,15,16,0.78)] px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_34px_rgba(0,0,0,0.42)] backdrop-blur-[18px] md:hidden",
+          "fixed inset-x-3 bottom-3 z-40 rounded-[1.55rem] border border-white/10 bg-surface-container-low/80 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_34px_rgba(0,0,0,0.42)] backdrop-blur-[18px] md:hidden",
           navVisible ? "pointer-events-auto" : "pointer-events-none",
         )}
       >
@@ -206,7 +206,7 @@ export function DesktopShell({
 
   return (
     <div className="hidden min-h-screen bg-background text-on-surface md:block">
-      <aside className="fixed inset-y-0 left-0 z-40 flex w-[14rem] flex-col border-r border-white/8 bg-[rgba(7,9,9,0.96)] px-4 py-5">
+      <aside className="fixed inset-y-0 left-0 z-40 flex w-[14rem] flex-col border-r border-white/8 bg-surface-dim/95 px-4 py-5">
         <a href={LANDING_PAGE_URL} aria-label="Go to Kolverdict landing page" className="block">
           <div className="space-y-1">
             <div className="font-display text-[1.25rem] font-bold uppercase tracking-[-0.055em] text-white">KOL Verdict</div>

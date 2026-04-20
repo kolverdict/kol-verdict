@@ -28,4 +28,4 @@ export const navItems: NavItem[] = [
 ];
 
 export const brandAvatar =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuBaciet9Hh2buUkZX5len-KYvdOBbU0CFSRW3bcyER50bwwbZ0W3sNq3HWZpeex9f-i1Y3ZtrkXSM_9x-nJ3yJQ61IYWQLp7Uwp_isxEfQva2hCZArvG9iaEPPmyIW1gMruSPrXrVpXdDYixOw5JLgPgzGO5r51uVlfJqcWZvLhH1lDG8ORgQsLsZHTCx7R0o5-YWD41bb5AkKwxhYnzHlqmcmV5kSjnwM81PvbsmD_vD_ybNTpvRqfCXDLYWqh9CIY6wg0JVfueEo";
+  "/branding/kol-verdict-mark.png";

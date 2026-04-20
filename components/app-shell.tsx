@@ -98,10 +98,11 @@ export function MobileShell({
         >
           <ImageCard
             src={avatar}
-            alt="KOL Verdict profile avatar"
+            alt="KOL Verdict shield mark"
             className="h-9 w-9 rounded-xl border border-outline-variant/40 bg-surface-container-high"
             sizes="40px"
             priority
+            imageClassName="object-contain"
           />
           <div className="space-y-0.5">
             <div className="font-display text-[1.05rem] font-semibold tracking-[-0.04em] text-white">{title}</div>
@@ -207,13 +208,19 @@ export function DesktopShell({
   return (
     <div className="hidden min-h-screen bg-background text-on-surface md:block">
       <aside className="fixed inset-y-0 left-0 z-40 flex w-[14rem] flex-col border-r border-white/8 bg-surface-dim/95 px-4 py-5">
-        <a href={LANDING_PAGE_URL} aria-label="Go to Kolverdict landing page" className="block">
-          <div className="space-y-1">
-            <div className="font-display text-[1.25rem] font-bold uppercase tracking-[-0.055em] text-white">KOL Verdict</div>
-            <div className="font-label text-[0.56rem] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
-              Verdict Engine
-            </div>
-          </div>
+        <a
+          href={LANDING_PAGE_URL}
+          aria-label="Go to Kolverdict landing page"
+          className="kv-focus-ring block rounded-[1.5rem] border border-white/8 bg-white/[0.02] p-3 transition-colors duration-200 hover:bg-white/[0.04]"
+        >
+          <ImageCard
+            src="/branding/kol-verdict-logo.png"
+            alt="KOL Verdict"
+            className="mx-auto aspect-square w-full max-w-[9.5rem]"
+            sizes="152px"
+            priority
+            imageClassName="object-contain"
+          />
         </a>
 
         <nav className="mt-7 space-y-1.5">

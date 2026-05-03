@@ -124,6 +124,16 @@ function truncate(value: string, maxLength = 96) {
   return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
+function attachKolMetadata<T extends { kol_id: string }>(
+  rows: T[],
+  kolsById: Map<string, JoinedKol>,
+): Array<T & { kols: JoinedKol | null }> {
+  return rows.map((row) => ({
+    ...row,
+    kols: kolsById.get(row.kol_id) ?? null,
+  }));
+}
+
 function buildTimelineEntries(votes: JoinedVoteRow[], comments: JoinedCommentRow[], watchlists: JoinedWatchlistRow[]) {
   const voteEntries: TimelineEntry[] = votes.map((vote) => {
     const kol = getKolMeta(vote);
@@ -283,19 +293,19 @@ export async function getCurrentUserProfileView() {
     client.database.from("profiles").select("*").eq("id", session.profileId).maybeSingle(),
     client.database
       .from("kol_votes")
-      .select("id, profile_id, kol_id, direction, tag, created_at, updated_at, kols(slug, x_username, display_name)")
+      .select("id, profile_id, kol_id, direction, tag, created_at, updated_at")
       .eq("profile_id", session.profileId)
       .order("updated_at", { ascending: false })
       .limit(24),
     client.database
       .from("kol_comments")
-      .select("id, profile_id, kol_id, body, tag, fee_amount, payment_status, moderation_status, created_at, updated_at, kols(slug, x_username, display_name)")
+      .select("id, profile_id, kol_id, body, tag, fee_amount, payment_status, moderation_status, created_at, updated_at")
       .eq("profile_id", session.profileId)
       .order("created_at", { ascending: false })
       .limit(24),
     client.database
       .from("kol_watchlists")
-      .select("id, profile_id, kol_id, created_at, kols(slug, x_username, display_name)")
+      .select("id, profile_id, kol_id, created_at")
       .eq("profile_id", session.profileId)
       .order("created_at", { ascending: false })
       .limit(24),
@@ -327,10 +337,36 @@ export async function getCurrentUserProfileView() {
   }
 
   const profile = mapProfileRow(profileResponse.data as ProfileRow);
-  const votes = (votesResponse.data ?? []) as JoinedVoteRow[];
-  const comments = (commentsResponse.data ?? []) as JoinedCommentRow[];
-  const watchlists = (watchlistsResponse.data ?? []) as JoinedWatchlistRow[];
+  const voteRows = (votesResponse.data ?? []) as KolVoteRow[];
+  const commentRows = (commentsResponse.data ?? []) as KolCommentRow[];
+  const watchlistRows = (watchlistsResponse.data ?? []) as KolWatchlistRow[];
   const rankings = (rankingsResponse.data ?? []) as Array<Pick<ProfileRow, "id" | "reputation_score">>;
+  const kolIds = [...new Set([...voteRows, ...commentRows, ...watchlistRows].map((row) => row.kol_id))];
+  const kolsResponse =
+    kolIds.length > 0
+      ? await client.database
+          .from("kols")
+          .select("id, slug, x_username, display_name")
+          .in("id", kolIds)
+      : { data: [], error: null };
+
+  if (kolsResponse.error) {
+    throw kolsResponse.error;
+  }
+
+  const kolsById = new Map(
+    (((kolsResponse.data as Array<Pick<KolRow, "id" | "slug" | "x_username" | "display_name">>) ?? [])).map((kol) => [
+      kol.id,
+      {
+        slug: kol.slug,
+        x_username: kol.x_username,
+        display_name: kol.display_name,
+      },
+    ]),
+  );
+  const votes = attachKolMetadata(voteRows, kolsById) as JoinedVoteRow[];
+  const comments = attachKolMetadata(commentRows, kolsById) as JoinedCommentRow[];
+  const watchlists = attachKolMetadata(watchlistRows, kolsById) as JoinedWatchlistRow[];
 
   const avatar = profile.avatarUrl ?? session.avatarUrl ?? null;
   const displayName = displayNameFromProfile(profile);

@@ -52,16 +52,7 @@ const KOL_SEARCH_LIMIT = 10;
 type HomeKolMetaRow = Pick<
   KolRow,
   "id" | "slug" | "display_name" | "x_username" | "avatar_url" | "bio" | "verified" | "initial_trust_score"
-> & {
-  kol_profile_metrics?:
-    | Pick<KolProfileMetricsRow, "trust_score" | "global_rank">
-    | Array<Pick<KolProfileMetricsRow, "trust_score" | "global_rank">>
-    | null;
-  kol_x_profiles?:
-    | Pick<KolXProfileRow, "profile_image_url" | "verified">
-    | Array<Pick<KolXProfileRow, "profile_image_url" | "verified">>
-    | null;
-};
+>;
 
 type HomeKolMeta = {
   kolId: string;
@@ -76,10 +67,6 @@ type HomeKolMeta = {
 function toArray<T>(value: T | T[] | null | undefined) {
   if (!value) return [] as T[];
   return Array.isArray(value) ? value : [value];
-}
-
-function firstRelation<T>(value: T | T[] | null | undefined) {
-  return toArray(value)[0];
 }
 
 function toneFromTag(tag: string | null, paymentStatus: PaymentStatus): Tone {
@@ -399,9 +386,11 @@ function buildHomeVerification(
   return "Registry Tracked";
 }
 
-function buildHomeKolMeta(row: HomeKolMetaRow): HomeKolMeta {
-  const profileMetrics = firstRelation(row.kol_profile_metrics);
-  const xProfile = firstRelation(row.kol_x_profiles);
+function buildHomeKolMeta(
+  row: HomeKolMetaRow,
+  profileMetrics?: Pick<KolProfileMetricsRow, "trust_score" | "global_rank"> | null,
+  xProfile?: Pick<KolXProfileRow, "profile_image_url" | "verified"> | null,
+): HomeKolMeta {
   const reputation = Math.max(
     0,
     Math.min(100, Math.round(Number(profileMetrics?.trust_score ?? row.initial_trust_score ?? 0))),
@@ -652,18 +641,59 @@ export async function getHomeCards() {
   const slugs = entries.map((entry) => entry.slug);
   const kolLookup = await client.database
     .from("kols")
-    .select("id, slug, display_name, x_username, avatar_url, bio, verified, initial_trust_score, kol_profile_metrics(trust_score, global_rank), kol_x_profiles(profile_image_url, verified)")
+    .select("id, slug, display_name, x_username, avatar_url, bio, verified, initial_trust_score")
     .in("slug", slugs);
-  const slugToKolId = new Map(
-    (((kolLookup.error ? [] : (kolLookup.data as Array<HomeKolMetaRow>)) ?? [])).map((row) => [row.slug, row.id]),
-  );
-  const slugToKolMeta = new Map(
-    (((kolLookup.error ? [] : (kolLookup.data as Array<HomeKolMetaRow>)) ?? [])).map((row) => [
-      row.slug,
-      buildHomeKolMeta(row),
+
+  if (kolLookup.error) {
+    throw kolLookup.error;
+  }
+
+  const kolRows = (kolLookup.data as HomeKolMetaRow[] | null) ?? [];
+  const slugToKolId = new Map(kolRows.map((row) => [row.slug, row.id]));
+  const kolIds = [...new Set(slugToKolId.values())];
+  const [profileMetricsResponse, xProfilesResponse] =
+    kolIds.length > 0
+      ? await Promise.all([
+          client.database
+            .from("kol_profile_metrics")
+            .select("kol_id, trust_score, global_rank")
+            .in("kol_id", kolIds),
+          client.database
+            .from("kol_x_profiles")
+            .select("kol_id, profile_image_url, verified")
+            .in("kol_id", kolIds),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  if (profileMetricsResponse.error) {
+    throw profileMetricsResponse.error;
+  }
+
+  if (xProfilesResponse.error) {
+    throw xProfilesResponse.error;
+  }
+
+  const profileMetricsByKolId = new Map(
+    (((profileMetricsResponse.data as Array<Pick<KolProfileMetricsRow, "kol_id" | "trust_score" | "global_rank">>) ?? [])).map((row) => [
+      row.kol_id,
+      row,
     ]),
   );
-  const kolIds = [...new Set(slugToKolId.values())];
+  const xProfilesByKolId = new Map(
+    (((xProfilesResponse.data as Array<Pick<KolXProfileRow, "kol_id" | "profile_image_url" | "verified">>) ?? [])).map((row) => [
+      row.kol_id,
+      row,
+    ]),
+  );
+  const slugToKolMeta = new Map(
+    kolRows.map((row) => [
+      row.slug,
+      buildHomeKolMeta(row, profileMetricsByKolId.get(row.id), xProfilesByKolId.get(row.id)),
+    ]),
+  );
 
   let reasonTagAggregates: Map<string, HomeReasonAggregate[]> | null = null;
 
@@ -808,7 +838,7 @@ export async function getKolProfile(slug: string): Promise<KolProfileView> {
   const client = createInsForgeServerClient();
   const kolResponse = await client.database
     .from("kols")
-    .select("id, slug, x_username, display_name, avatar_url, bio, verified, initial_trust_score, kol_metrics_cache(*)")
+    .select("id, slug, x_username, display_name, avatar_url, bio, verified, initial_trust_score")
     .eq("slug", slug)
     .eq("status", "active")
     .maybeSingle();
@@ -821,26 +851,82 @@ export async function getKolProfile(slug: string): Promise<KolProfileView> {
     throw new AppError("kol_not_found", "KOL not found.", 404);
   }
 
-  const row = kolResponse.data as KolRow & { kol_metrics_cache?: KolMetricsCacheRow | KolMetricsCacheRow[] | null };
-  const metrics = firstRelation(row.kol_metrics_cache);
-  const score = Number(metrics?.trust_score ?? row.initial_trust_score ?? 0);
-  const loveCount = metrics?.love_count ?? 0;
-  const hateCount = metrics?.hate_count ?? 0;
-  const totalComments = metrics?.total_comments ?? 0;
-  const positive = Math.round((loveCount / Math.max(1, loveCount + hateCount)) * 100);
-  const commentsResponse = await client.database
-    .from("kol_comments")
-    .select("id, profile_id, kol_id, body, tag, fee_amount, payment_status, moderation_status, created_at, updated_at, profiles(username, avatar_url, wallet_address), comment_evidence(*)")
-    .eq("kol_id", row.id)
-    .eq("moderation_status", "published")
-    .order("created_at", { ascending: false })
-    .limit(12);
+  const row = kolResponse.data as KolRow;
+  const [metricsResponse, commentsResponse] = await Promise.all([
+    client.database.from("kol_metrics_cache").select("*").eq("kol_id", row.id).maybeSingle(),
+    client.database
+      .from("kol_comments")
+      .select("id, profile_id, kol_id, body, tag, fee_amount, payment_status, moderation_status, created_at, updated_at")
+      .eq("kol_id", row.id)
+      .eq("moderation_status", "published")
+      .order("created_at", { ascending: false })
+      .limit(12),
+  ]);
+
+  if (metricsResponse.error) {
+    throw metricsResponse.error;
+  }
 
   if (commentsResponse.error) {
     throw commentsResponse.error;
   }
 
-  const comments = ((commentsResponse.data as JoinedKolCommentRow[] | null) ?? []).map(buildRealCommentView);
+  const metrics = (metricsResponse.data as KolMetricsCacheRow | null) ?? null;
+  const score = Number(metrics?.trust_score ?? row.initial_trust_score ?? 0);
+  const loveCount = metrics?.love_count ?? 0;
+  const hateCount = metrics?.hate_count ?? 0;
+  const totalComments = metrics?.total_comments ?? 0;
+  const positive = Math.round((loveCount / Math.max(1, loveCount + hateCount)) * 100);
+  const commentRows = (commentsResponse.data as KolCommentRow[] | null) ?? [];
+  const profileIds = [...new Set(commentRows.map((comment) => comment.profile_id))];
+  const commentIds = commentRows.map((comment) => comment.id);
+  const [profilesResponse, evidenceResponse] =
+    commentRows.length > 0
+      ? await Promise.all([
+          client.database
+            .from("profiles")
+            .select("id, username, avatar_url, wallet_address")
+            .in("id", profileIds),
+          client.database
+            .from("comment_evidence")
+            .select("*")
+            .in("comment_id", commentIds),
+        ])
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
+
+  if (profilesResponse.error) {
+    throw profilesResponse.error;
+  }
+
+  if (evidenceResponse.error) {
+    throw evidenceResponse.error;
+  }
+
+  const profilesById = new Map(
+    (((profilesResponse.data as Array<Pick<ProfileRow, "id" | "username" | "avatar_url" | "wallet_address">>) ?? [])).map((profile) => [
+      profile.id,
+      profile,
+    ]),
+  );
+  const evidenceByCommentId = (((evidenceResponse.data as CommentEvidenceRow[] | null) ?? [])).reduce<
+    Map<string, CommentEvidenceRow[]>
+  >((result, entry) => {
+    const bucket = result.get(entry.comment_id) ?? [];
+    bucket.push(entry);
+    result.set(entry.comment_id, bucket);
+    return result;
+  }, new Map());
+  const comments = commentRows
+    .map((comment) =>
+      buildRealCommentView({
+        ...comment,
+        profiles: profilesById.get(comment.profile_id) ?? null,
+        comment_evidence: evidenceByCommentId.get(comment.id) ?? [],
+      }),
+    );
   const proofPoints = buildProofPoints(comments);
   const activity = buildActivity(comments, positive);
   const endorsers = buildEndorsers(comments);

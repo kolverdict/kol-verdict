@@ -100,11 +100,12 @@ function buildRealStats(
 
 export async function getLeaderboardSnapshot(tab: LeaderboardTab): Promise<LeaderboardSnapshot> {
   const client = createInsForgeServerClient();
-  const [kolsResponse, profilesResponse] = await Promise.all([
+  const [kolsResponse, metricsResponse, profilesResponse] = await Promise.all([
     client.database
       .from("kols")
-      .select("id, slug, x_username, display_name, avatar_url, bio, wallet_address, verified, initial_trust_score, kol_metrics_cache(*)")
+      .select("id, slug, x_username, display_name, avatar_url, bio, wallet_address, verified, initial_trust_score")
       .eq("status", "active"),
+    client.database.from("kol_metrics_cache").select("*"),
     client.database.from("profiles").select("reputation_score"),
   ]);
 
@@ -112,19 +113,32 @@ export async function getLeaderboardSnapshot(tab: LeaderboardTab): Promise<Leade
     throw kolsResponse.error;
   }
 
+  if (metricsResponse.error) {
+    throw metricsResponse.error;
+  }
+
   if (profilesResponse.error) {
     throw profilesResponse.error;
   }
 
-  const rows = ((kolsResponse.data as Array<KolRow & { kol_metrics_cache?: KolMetricsCacheRow | KolMetricsCacheRow[] | null }>) ?? []);
+  const rows = (kolsResponse.data as KolRow[] | null) ?? [];
+  const metricsByKolId = new Map(
+    (((metricsResponse.data as KolMetricsCacheRow[] | null) ?? [])).map((row) => [row.kol_id, row]),
+  );
   const entries = sortEntries(
-    rows.map((row) => mapRealEntry(row, firstRelation(row.kol_metrics_cache))),
+    rows.map((row) => mapRealEntry(row, metricsByKolId.get(row.id))),
     tab,
   );
 
   return {
     tab,
-    stats: buildRealStats(rows, (profilesResponse.data as Array<Pick<ProfileRow, "reputation_score">>) ?? []),
+    stats: buildRealStats(
+      rows.map((row) => ({
+        ...row,
+        kol_metrics_cache: metricsByKolId.get(row.id) ?? null,
+      })),
+      (profilesResponse.data as Array<Pick<ProfileRow, "reputation_score">>) ?? [],
+    ),
     entries,
     total: entries.length,
   };

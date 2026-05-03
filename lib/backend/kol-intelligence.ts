@@ -14,49 +14,37 @@ import type {
   KolXProfileRow,
 } from "@/lib/types/db";
 
-type JoinedKolIntelligenceRow = KolRow & {
-  kol_metrics_cache?: KolMetricsCacheRow | KolMetricsCacheRow[] | null;
-  kol_profile_metrics?: KolProfileMetricsRow | KolProfileMetricsRow[] | null;
-  kol_reasoning_points?: KolReasoningPointRow[] | null;
-  kol_recent_signals?: KolRecentSignalRow[] | null;
-  kol_data_sources?: KolDataSourceRow[] | null;
-  kol_x_profiles?: KolXProfileRow | KolXProfileRow[] | null;
-};
-
-function toArray<T>(value: T | T[] | null | undefined) {
-  if (!value) {
-    return [] as T[];
-  }
-
-  return Array.isArray(value) ? value : [value];
-}
-
-function firstRelation<T>(value: T | T[] | null | undefined) {
-  return toArray(value)[0] ?? null;
-}
-
 async function deriveGlobalRank(kolId: string) {
   const client = createInsForgeServerClient();
-  const response = await client.database
-    .from("kols")
-    .select("id, slug, initial_trust_score, kol_metrics_cache(trust_score, trending_score)")
-    .eq("status", "active");
+  const [kolsResponse, metricsResponse] = await Promise.all([
+    client.database
+      .from("kols")
+      .select("id, slug, initial_trust_score")
+      .eq("status", "active"),
+    client.database.from("kol_metrics_cache").select("kol_id, trust_score, trending_score"),
+  ]);
 
-  if (response.error) {
-    throw response.error;
+  if (kolsResponse.error) {
+    throw kolsResponse.error;
   }
 
+  if (metricsResponse.error) {
+    throw metricsResponse.error;
+  }
+
+  const metricsByKolId = new Map(
+    (((metricsResponse.data as Array<Pick<KolMetricsCacheRow, "kol_id" | "trust_score" | "trending_score">>) ?? [])).map((row) => [
+      row.kol_id,
+      row,
+    ]),
+  );
   const rankedRows =
-    ((response.data as Array<
-      Pick<KolRow, "id" | "slug" | "initial_trust_score"> & {
-        kol_metrics_cache?: KolMetricsCacheRow | KolMetricsCacheRow[] | null;
-      }
-    > | null) ?? [])
+    (((kolsResponse.data as Array<Pick<KolRow, "id" | "slug" | "initial_trust_score">>) ?? []))
       .map((row) => ({
         id: row.id,
         slug: row.slug,
-        trustScore: Number(firstRelation(row.kol_metrics_cache)?.trust_score ?? row.initial_trust_score ?? 0),
-        trendingScore: Number(firstRelation(row.kol_metrics_cache)?.trending_score ?? 0),
+        trustScore: Number(metricsByKolId.get(row.id)?.trust_score ?? row.initial_trust_score ?? 0),
+        trendingScore: Number(metricsByKolId.get(row.id)?.trending_score ?? 0),
       }))
       .sort((left, right) => {
         if (right.trustScore !== left.trustScore) {
@@ -78,17 +66,7 @@ export async function getKolProfileDetail(slug: string): Promise<KolProfileDetai
   const client = createInsForgeServerClient();
   const response = await client.database
     .from("kols")
-    .select(
-      [
-        "*",
-        "kol_metrics_cache(*)",
-        "kol_profile_metrics(*)",
-        "kol_reasoning_points(*)",
-        "kol_recent_signals(*)",
-        "kol_data_sources(*)",
-        "kol_x_profiles(*)",
-      ].join(", "),
-    )
+    .select("*")
     .eq("slug", slug)
     .eq("status", "active")
     .maybeSingle();
@@ -101,15 +79,49 @@ export async function getKolProfileDetail(slug: string): Promise<KolProfileDetai
     throw new AppError("kol_not_found", "KOL not found.", 404);
   }
 
-  const row = response.data as unknown as JoinedKolIntelligenceRow;
+  const row = response.data as KolRow;
+  const [metricsCacheResponse, profileMetricsResponse, reasoningPointsResponse, recentSignalsResponse, dataSourcesResponse, xProfileResponse] =
+    await Promise.all([
+      client.database.from("kol_metrics_cache").select("*").eq("kol_id", row.id).maybeSingle(),
+      client.database.from("kol_profile_metrics").select("*").eq("kol_id", row.id).maybeSingle(),
+      client.database.from("kol_reasoning_points").select("*").eq("kol_id", row.id).order("sort_order", { ascending: true }),
+      client.database.from("kol_recent_signals").select("*").eq("kol_id", row.id).order("published_at", { ascending: false }),
+      client.database.from("kol_data_sources").select("*").eq("kol_id", row.id).order("created_at", { ascending: false }),
+      client.database.from("kol_x_profiles").select("*").eq("kol_id", row.id).maybeSingle(),
+    ]);
+
+  if (metricsCacheResponse.error) {
+    throw metricsCacheResponse.error;
+  }
+
+  if (profileMetricsResponse.error) {
+    throw profileMetricsResponse.error;
+  }
+
+  if (reasoningPointsResponse.error) {
+    throw reasoningPointsResponse.error;
+  }
+
+  if (recentSignalsResponse.error) {
+    throw recentSignalsResponse.error;
+  }
+
+  if (dataSourcesResponse.error) {
+    throw dataSourcesResponse.error;
+  }
+
+  if (xProfileResponse.error) {
+    throw xProfileResponse.error;
+  }
+
   const normalized = normalizeKolProfileDetail({
     kol: row,
-    metricsCache: firstRelation(row.kol_metrics_cache),
-    profileMetrics: firstRelation(row.kol_profile_metrics),
-    reasoningPoints: toArray(row.kol_reasoning_points),
-    recentSignals: toArray(row.kol_recent_signals),
-    dataSources: toArray(row.kol_data_sources),
-    xProfile: firstRelation(row.kol_x_profiles),
+    metricsCache: (metricsCacheResponse.data as KolMetricsCacheRow | null) ?? null,
+    profileMetrics: (profileMetricsResponse.data as KolProfileMetricsRow | null) ?? null,
+    reasoningPoints: (reasoningPointsResponse.data as KolReasoningPointRow[] | null) ?? [],
+    recentSignals: (recentSignalsResponse.data as KolRecentSignalRow[] | null) ?? [],
+    dataSources: (dataSourcesResponse.data as KolDataSourceRow[] | null) ?? [],
+    xProfile: (xProfileResponse.data as KolXProfileRow | null) ?? null,
     derivedGlobalRank: await deriveGlobalRank(row.id),
   });
 

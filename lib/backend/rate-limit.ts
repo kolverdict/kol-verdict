@@ -17,6 +17,8 @@ type RateLimitResult = {
   retry_after_seconds: number;
 };
 
+let warnedMissingRateLimitRpc = false;
+
 const rateLimitConfigs = {
   createKol: {
     action: "create_kol",
@@ -77,6 +79,28 @@ function getClientIp(headers: Headers) {
   return "unknown";
 }
 
+function isMissingRateLimitRpcError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as {
+    code?: string | null;
+    message?: string | null;
+    details?: string | null;
+    hint?: string | null;
+  };
+  const haystack = [candidate.code, candidate.message, candidate.details, candidate.hint]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    haystack.includes("check_and_increment_rate_limit") &&
+    (haystack.includes("schema cache") || haystack.includes("could not find the function") || haystack.includes("pgrst"))
+  );
+}
+
 async function checkLimit(config: RateLimitConfig, subject: string, windowSeconds: number, limit: number) {
   const client = createInsForgeServerClient();
   const response = await client.database.rpc("check_and_increment_rate_limit", {
@@ -87,6 +111,27 @@ async function checkLimit(config: RateLimitConfig, subject: string, windowSecond
   });
 
   if (response.error) {
+    if (isMissingRateLimitRpcError(response.error)) {
+      if (!warnedMissingRateLimitRpc) {
+        warnedMissingRateLimitRpc = true;
+        console.warn(
+          JSON.stringify({
+            scope: "rate_limit",
+            level: "warn",
+            action: config.action,
+            message: "Rate limit RPC missing; continuing without persistent backend rate limiting.",
+          }),
+        );
+      }
+
+      return {
+        allowed: true,
+        remaining: limit,
+        reset_at: new Date(Date.now() + windowSeconds * 1000).toISOString(),
+        retry_after_seconds: 0,
+      } satisfies RateLimitResult;
+    }
+
     throw new AppError("rate_limit_check_failed", response.error.message, 500, {
       logDetails: {
         action: config.action,

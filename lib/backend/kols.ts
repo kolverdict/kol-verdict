@@ -21,10 +21,7 @@ import type {
   EvidenceType,
   KolCommentRow,
   KolMetricsCacheRow,
-  KolProfileMetricsRow,
   KolRow,
-  KolVoteRow,
-  KolXProfileRow,
   PaymentStatus,
   ProfileRow,
   VoteDirection,
@@ -38,31 +35,8 @@ type JoinedKolCommentRow = KolCommentRow & {
   comment_evidence?: CommentEvidenceRow[] | null;
 };
 
-type HomeReasonSource = "vote" | "comment";
-type HomeReasonAggregate = {
-  label: string;
-  tone: Tone;
-  count: number;
-  latestAt: number;
-};
-
 const HOME_REASON_TAG_LIMIT = 2;
 const KOL_SEARCH_LIMIT = 10;
-
-type HomeKolMetaRow = Pick<
-  KolRow,
-  "id" | "slug" | "display_name" | "x_username" | "avatar_url" | "bio" | "verified" | "initial_trust_score"
->;
-
-type HomeKolMeta = {
-  kolId: string;
-  name: string;
-  image: string | null;
-  bio: string | null;
-  reputation: number;
-  globalRank: string | null;
-  verified: boolean;
-};
 
 function toArray<T>(value: T | T[] | null | undefined) {
   if (!value) return [] as T[];
@@ -386,65 +360,6 @@ function buildHomeVerification(
   return "Registry Tracked";
 }
 
-function buildHomeKolMeta(
-  row: HomeKolMetaRow,
-  profileMetrics?: Pick<KolProfileMetricsRow, "trust_score" | "global_rank"> | null,
-  xProfile?: Pick<KolXProfileRow, "profile_image_url" | "verified"> | null,
-): HomeKolMeta {
-  const reputation = Math.max(
-    0,
-    Math.min(100, Math.round(Number(profileMetrics?.trust_score ?? row.initial_trust_score ?? 0))),
-  );
-  const globalRank =
-    profileMetrics?.global_rank !== null && profileMetrics?.global_rank !== undefined
-      ? `Global Rank #${Math.round(Number(profileMetrics.global_rank))}`
-      : null;
-
-  return {
-    kolId: row.id,
-    name: row.display_name?.trim() || row.x_username,
-    image: xProfile?.profile_image_url ?? row.avatar_url ?? null,
-    bio: row.bio?.trim() || null,
-    reputation,
-    globalRank,
-    verified: Boolean(xProfile?.verified) || Boolean(row.verified),
-  };
-}
-
-function normalizeHomeReasonTag(tag: string | null | undefined, source: HomeReasonSource) {
-  const normalized = tag?.trim().toLowerCase();
-
-  if (!normalized) {
-    return null;
-  }
-
-  if (source === "vote" && ["trust", "scam", "endorse", "reject", "love", "hate"].includes(normalized)) {
-    return null;
-  }
-
-  if (["rug", "risk", "warning", "flagged"].some((keyword) => normalized.includes(keyword))) {
-    return { label: "Rug risk", tone: "tertiary" as const };
-  }
-
-  if (source === "comment" && normalized === "scam") {
-    return { label: "Rug risk", tone: "tertiary" as const };
-  }
-
-  if (["accurate", "verified", "legit", "good"].some((keyword) => normalized.includes(keyword))) {
-    return { label: "High accuracy", tone: "primary" as const };
-  }
-
-  if (["alpha", "early", "sol"].some((keyword) => normalized.includes(keyword))) {
-    return { label: "Early SOL call", tone: "secondary" as const };
-  }
-
-  if (["bull", "bullish"].some((keyword) => normalized.includes(keyword))) {
-    return { label: "Bullish signal", tone: "primary" as const };
-  }
-
-  return null;
-}
-
 function dedupeReasonTags(tags: HomeCardView["reasonTags"]) {
   const seen = new Set<string>();
   const deduped: HomeCardView["reasonTags"] = [];
@@ -536,76 +451,13 @@ function buildFallbackHomeReasonTags(entry: LeaderboardEntryView): HomeCardView[
   return dedupeReasonTags(fallbackTags).slice(0, HOME_REASON_TAG_LIMIT);
 }
 
-function buildHomeReasonTags(
-  entry: LeaderboardEntryView,
-  aggregates: Map<string, HomeReasonAggregate[]> | null,
-  kolId: string | null | undefined,
-) {
-  const communityTags = kolId ? aggregates?.get(kolId) ?? [] : [];
-
-  if (communityTags.length > 0) {
-    return communityTags
-      .slice(0, HOME_REASON_TAG_LIMIT)
-      .map((tag) => ({ label: tag.label, tone: tag.tone }));
-  }
-
-  return buildFallbackHomeReasonTags(entry);
-}
-
-function buildHomeReasonTagMap(
-  voteRows: Array<Pick<KolVoteRow, "kol_id" | "tag" | "created_at" | "updated_at">>,
-  commentRows: Array<Pick<KolCommentRow, "kol_id" | "tag" | "created_at">>,
-) {
-  const aggregates = new Map<string, Map<string, HomeReasonAggregate>>();
-
-  function registerTag(kolId: string, tag: string | null | undefined, source: HomeReasonSource, timestamp: string) {
-    const normalized = normalizeHomeReasonTag(tag, source);
-
-    if (!normalized) {
-      return;
-    }
-
-    const latestAt = new Date(timestamp).getTime();
-    const bucket = aggregates.get(kolId) ?? new Map<string, HomeReasonAggregate>();
-    const existing = bucket.get(normalized.label);
-
-    bucket.set(normalized.label, {
-      label: normalized.label,
-      tone: normalized.tone,
-      count: (existing?.count ?? 0) + 1,
-      latestAt: Math.max(existing?.latestAt ?? 0, latestAt),
-    });
-    aggregates.set(kolId, bucket);
-  }
-
-  voteRows.forEach((row) => {
-    registerTag(row.kol_id, row.tag, "vote", row.updated_at ?? row.created_at);
-  });
-
-  commentRows.forEach((row) => {
-    registerTag(row.kol_id, row.tag, "comment", row.created_at);
-  });
-
-  return new Map(
-    [...aggregates.entries()].map(([kolId, tagMap]) => [
-      kolId,
-      [...tagMap.values()].sort((left, right) => {
-        if (right.count !== left.count) return right.count - left.count;
-        if (right.latestAt !== left.latestAt) return right.latestAt - left.latestAt;
-        return left.label.localeCompare(right.label);
-      }),
-    ]),
-  );
-}
-
 function mapHomeCard(
   entry: LeaderboardEntryView,
   index: number,
   reasonTags: HomeCardView["reasonTags"],
-  meta?: HomeKolMeta,
 ): HomeCardView {
-  const reputation = meta?.reputation ?? Math.round(entry.trustScore / 10);
-  const verified = meta?.verified ?? Boolean(entry.verified);
+  const reputation = Math.round(entry.trustScore / 10);
+  const verified = Boolean(entry.verified);
 
   return {
     slug: entry.slug,
@@ -614,12 +466,12 @@ function mapHomeCard(
     reputation,
     badge: buildHomeBadge(index, entry.trendingScore),
     verification: buildHomeVerification(entry, { reputation, verified }),
-    image: meta?.image ?? entry.image,
+    image: entry.image,
     subjectId: `0x${entry.slug.slice(0, 3)}...${entry.slug.slice(-3)}`,
-    name: meta?.name ?? entry.displayName ?? entry.handle.replace("@", ""),
-    bio: meta?.bio ?? entry.subtitle,
+    name: entry.displayName ?? entry.handle.replace("@", ""),
+    bio: entry.subtitle,
     monthlyChange: entry.trendLabel,
-    globalRank: meta?.globalRank ?? `Global Rank #${index + 1}`,
+    globalRank: `Global Rank #${index + 1}`,
     reasonTags,
     stats: [
       { label: "Total Mentions", value: entry.flowLabel.replace(" SIGNALS", "") },
@@ -637,95 +489,11 @@ export async function getHomeCards() {
     return [];
   }
 
-  const client = createInsForgeServerClient();
-  const slugs = entries.map((entry) => entry.slug);
-  const kolLookup = await client.database
-    .from("kols")
-    .select("id, slug, display_name, x_username, avatar_url, bio, verified, initial_trust_score")
-    .in("slug", slugs);
-
-  if (kolLookup.error) {
-    throw kolLookup.error;
-  }
-
-  const kolRows = (kolLookup.data as HomeKolMetaRow[] | null) ?? [];
-  const slugToKolId = new Map(kolRows.map((row) => [row.slug, row.id]));
-  const kolIds = [...new Set(slugToKolId.values())];
-  const [profileMetricsResponse, xProfilesResponse] =
-    kolIds.length > 0
-      ? await Promise.all([
-          client.database
-            .from("kol_profile_metrics")
-            .select("kol_id, trust_score, global_rank")
-            .in("kol_id", kolIds),
-          client.database
-            .from("kol_x_profiles")
-            .select("kol_id, profile_image_url, verified")
-            .in("kol_id", kolIds),
-        ])
-      : [
-          { data: [], error: null },
-          { data: [], error: null },
-        ];
-
-  if (profileMetricsResponse.error) {
-    throw profileMetricsResponse.error;
-  }
-
-  if (xProfilesResponse.error) {
-    throw xProfilesResponse.error;
-  }
-
-  const profileMetricsByKolId = new Map(
-    (((profileMetricsResponse.data as Array<Pick<KolProfileMetricsRow, "kol_id" | "trust_score" | "global_rank">>) ?? [])).map((row) => [
-      row.kol_id,
-      row,
-    ]),
-  );
-  const xProfilesByKolId = new Map(
-    (((xProfilesResponse.data as Array<Pick<KolXProfileRow, "kol_id" | "profile_image_url" | "verified">>) ?? [])).map((row) => [
-      row.kol_id,
-      row,
-    ]),
-  );
-  const slugToKolMeta = new Map(
-    kolRows.map((row) => [
-      row.slug,
-      buildHomeKolMeta(row, profileMetricsByKolId.get(row.id), xProfilesByKolId.get(row.id)),
-    ]),
-  );
-
-  let reasonTagAggregates: Map<string, HomeReasonAggregate[]> | null = null;
-
-  if (kolIds.length > 0) {
-    const [voteTagsResponse, commentTagsResponse] = await Promise.all([
-      client.database
-        .from("kol_votes")
-        .select("kol_id, tag, created_at, updated_at")
-        .in("kol_id", kolIds)
-        .not("tag", "is", null),
-      client.database
-        .from("kol_comments")
-        .select("kol_id, tag, created_at")
-        .in("kol_id", kolIds)
-        .eq("moderation_status", "published")
-        .not("tag", "is", null),
-    ]);
-
-    if (!voteTagsResponse.error && !commentTagsResponse.error) {
-      reasonTagAggregates = buildHomeReasonTagMap(
-        (voteTagsResponse.data as Array<Pick<KolVoteRow, "kol_id" | "tag" | "created_at" | "updated_at">>) ?? [],
-        (commentTagsResponse.data as Array<Pick<KolCommentRow, "kol_id" | "tag" | "created_at">>) ?? [],
-      );
-    }
-  }
-
   return entries.map((entry, index) =>
     mapHomeCard(
       entry,
       index,
-      buildHomeReasonTags(entry, reasonTagAggregates, slugToKolId.get(entry.slug)),
-      slugToKolMeta.get(entry.slug),
+      buildFallbackHomeReasonTags(entry),
     ),
   );
 }
